@@ -1,11 +1,11 @@
 {
-    "jobname": "11182020",
+    "jobname": "launch-test",
     "experiments": [
         {
             "model": "resnet18",
             "data": 
             {
-                "dataset": "CIFAR10"
+                "dataset": "CIFAR100"
             },
             "optimizer": 
             {

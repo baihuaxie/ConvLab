@@ -112,7 +112,7 @@ if __name__ == '__main__':
     # Launch job
     for run_dir in runs:
         # launch training job with specified setting
-        cmd = "{python} main.py --run_dir={run_dir} --data_dir {data_dir} \
+        cmd = "{python} main.py --run_dir {run_dir} --data_dir {data_dir} \
             --run_mode train".format(python=PYTHON, run_dir=run_dir, data_dir=args.data_dir)
         print(cmd)
         check_call(cmd, shell=True)
