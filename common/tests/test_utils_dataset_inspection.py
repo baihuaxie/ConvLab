@@ -3,6 +3,7 @@ test dataset inspection utilities
 """
 
 import pytest
+import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
@@ -10,7 +11,8 @@ from torchvision.utils import make_grid
 import torchvision.datasets as ds
 
 from common.data_loader import select_n_random
-from common.utils_dataset_inspection import show_images
+from common.utils_dataset_inspection import show_images, \
+    show_labelled_images, get_classes
 
 
 # keyword arguments for Dataloader
@@ -20,6 +22,7 @@ kwargs = {
     "pin_memory": False,
     "shuffle": True
 }
+
 
 @pytest.fixture(params=['CIFAR100'])
 def dataset(request):
@@ -48,19 +51,34 @@ def datasets(dataset, datadir, transform):
     return train_dl, test_dl
 
 @pytest.fixture
+def classes(dataset, datadir):
+    """
+    """
+    return get_classes(dataset, datadir)
+
+@pytest.fixture
 def select_random_train(dataset, datadir):
     """
     select n random data points from training set
     """
-    return select_n_random('train', datadir, dataset, n=16)
+    return select_n_random('train', datadir, dataset, n=20)
 
+@pytest.mark.skip()
 def test_imshow(select_random_train):
     """
     print images
     """
-    images, labels = select_random_train
+    images, _ = select_random_train
     print(images.shape)
     # make_grid input must be BxCxHxW in shape
     img_grid = make_grid(images)
     show_images(img_grid)
+    plt.show()
 
+
+def test_show_labelled_images(select_random_train, classes):
+    """
+    """
+    images, labels = select_random_train
+    show_labelled_images(images, labels, classes, nrows=4, ncols=4)
+    
