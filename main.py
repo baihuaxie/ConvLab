@@ -37,14 +37,14 @@ from model.build_models import get_network_builder
 
 # commandline
 parser = argparse.ArgumentParser()
-parser.add_argument('--run_dir', default='./experiments/launch-test',
+parser.add_argument('--run_dir', default='./experiments/launch-test/resnet18_CIFAR100_SGD_MultiStepLR',
                     help='Directory containing the runset.json')
 parser.add_argument('--data_dir', default='./data/',
                     help='Directory containing the dataset')
 parser.add_argument('--restore_file', default='best',
                     help='Optional, name of file in --run_dir containing weights / \
                         hyperparameters to be loaded before training')
-parser.add_argument('--run_mode', default='test', help='test mode run a subset \
+parser.add_argument('--run_mode', default='train', help='test mode run a subset \
     of batches to test flow')
 
 
@@ -151,8 +151,15 @@ if __name__ == '__main__':
     params = Params(json_path)
 
     # parse run parameters
+    try:
+        # model kwargs could be None
+        model_kwargs = params.model['kwargs']
+    except KeyError:
+        raise "Model keyword argument is None!"
     dataset = params.data['dataset']
-    dataset_kwargs = params.data['kwargs']
+    dataloader_kwargs = params.data['dataloader-kwargs']
+    trainset_kwargs = params.data['trainset-kwargs']
+    valset_kwargs = params.data['valset-kwargs']
     optim_type = params.optimizer['type']
     optim_kwargs = params.optimizer['kwargs']
     lr_type = params.scheduler['type']
@@ -175,7 +182,7 @@ if __name__ == '__main__':
 
     ### ------ instantiations ----- ###
     # build model
-    model = get_network_builder(params.model)().to(device)
+    model = get_network_builder(params.model['network'])(**model_kwargs).to(device)
 
     # build the optimizer
     optimizer = getattr(optim, optim_type)(model.parameters(), **optim_kwargs)
@@ -184,7 +191,7 @@ if __name__ == '__main__':
     scheduler = getattr(optim.lr_scheduler, lr_type)(optimizer, lr_kwargs)
 
     # add model architecture to tensorboard & log
-    images, _ = select_n_random('train', args.data_dir, dataset, n=2)
+    images, _ = select_n_random('train', args.data_dir, trainset_kwargs, valset_kwargs, dataset, n=2)
     images = images.to(device)
     # 1) write architecutre to tensorboard
     writer.add_graph(model, images.float())
@@ -198,20 +205,20 @@ if __name__ == '__main__':
     # fetch the data loaders
     # if in test mode, fetch 10 batches (default batch size = 32)
     if args.run_mode == 'test':
-        data_loaders = fetch_subset_dataloader(['train', 'test'], args.data_dir, dataset, \
-            **dataset_kwargs)
+        data_loaders = fetch_subset_dataloader(['train', 'val'], args.data_dir, dataset, \
+            dataloader_kwargs, trainset_kwargs, valset_kwargs)
         train_dl = data_loaders['train']
-        test_dl = data_loaders['test']
+        val_dl = data_loaders['val']
     else:
-        data_loaders = fetch_dataloader(['train', 'test'], args.data_dir, dataset, \
-            **dataset_kwargs)
+        data_loaders = fetch_dataloader(['train', 'val'], args.data_dir, dataset, \
+            dataloader_kwargs, trainset_kwargs, valset_kwargs)
         train_dl = data_loaders['train']
-        test_dl = data_loaders['test']
+        val_dl = data_loaders['val']
 
     logging.info('- done.')
 
     # start training
     logging.info('Starting training for {} epoch(s)...'.format(params.num_epochs))
 
-    train_and_evaluate(model, optimizer, train_dl, test_dl, loss_fn, metrics, params,
+    train_and_evaluate(model, optimizer, train_dl, val_dl, loss_fn, metrics, params,
                        args.run_dir, device, scheduler, args.restore_file, writer)

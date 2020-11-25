@@ -2,7 +2,10 @@
     "jobname": "launch-test",
     "experiments": [
         {
-            "model": "resnet18",
+            "model": 
+            {
+                "network": "resnet18"
+            },
             "data": 
             {
                 "dataset": "CIFAR100"
@@ -17,7 +20,10 @@
             }
         },
         {
-            "model": "resnet18",
+            "model": 
+            {
+                "network": "resnet18"
+            },
             "data": 
             {
                 "dataset": "CIFAR10"
@@ -32,7 +38,10 @@
             }
         },
         {
-            "model": "resnet50",
+            "model": 
+            {
+                "network": "resnet50"
+            },
             "data": 
             {
                 "dataset": "CIFAR10"
@@ -48,7 +57,10 @@
             }
         },
         {
-            "model": "resnet101",
+            "model": 
+            {
+                "network": "resnet101"
+            },
             "data": 
             {
                 "dataset": "CIFAR10"

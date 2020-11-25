@@ -44,7 +44,7 @@ def register(func):
 
 
 @register
-def creat_job(run_dct, defaults):
+def create_job(run_dct, defaults):
     """
     create a run directory from run_dict
 
@@ -57,6 +57,12 @@ def creat_job(run_dct, defaults):
         create a self-contained runset.json file under the run directory for main.py
         returns run_dir: os.path object to the directory
     """
+
+    # create run directory
+    run_dir = os.path.join(exp_dir, '_'.join(dict_to_list(run_dct)))
+    if not os.path.exists(run_dir):
+        os.makedirs(run_dir)
+
     # construct runset.json
     runset = {}
     runset.update({k:v for k, v in defaults.dict.items() if k not in ['data', \
@@ -64,7 +70,10 @@ def creat_job(run_dct, defaults):
     for key, value in run_dct.items():
         if key == 'data':
             data_dct = match_dict_by_value(defaults.data, 'dataset', value['dataset'])
-            data_dct['kwargs'].update({k:v for k, v in value.items() if k != 'dataset'})
+            for k, v in value.items():
+                if k != 'dataset':
+                    data_dct[k].update(v)
+            # data_dct['dataloader-kwargs'].update({k:v for k, v in value.items() if k != 'dataset'})
             runset.update({'data': data_dct})
         elif key == 'optimizer':
             optim_dct = match_dict_by_value(defaults.optimizer, 'type', value['type'])
@@ -76,10 +85,14 @@ def creat_job(run_dct, defaults):
             runset.update({'scheduler': lr_dct})
         else:
             runset.update({key:value})
-    # create run directory
-    run_dir = os.path.join(exp_dir, '_'.join(dict_to_list(run_dct)))
-    if not os.path.exists(run_dir):
-        os.makedirs(run_dir)
+
+    # add a "kwargs" field under "model" key
+    runset['model'].update({'kwargs': {}})
+    # add num_classes from "data" key to "model" key
+    try:
+        runset['model']['kwargs'].update({'num_classes': data_dct['num_classes']})
+    except KeyError:
+        pass
     # save runset.json
     with open(os.path.join(run_dir, 'runset.json'), 'w') as fp:
         json.dump(runset, fp, indent=4)
@@ -107,7 +120,7 @@ if __name__ == '__main__':
 
     # create run directories + runset.json files
     for run_dct in jobs.experiments:
-        creat_job(run_dct, defaults)
+        create_job(run_dct, defaults)
 
     # Launch job
     for run_dir in runs:

@@ -22,7 +22,7 @@
     "data": 
     {
         "dataset": "CIFAR10",
-        "kwargs":
+        "dataloader-kwargs":
         {
             "num_workers": 4,
             "pin_memory": false,

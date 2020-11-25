@@ -62,22 +62,44 @@
     "data": [
         {
             "dataset": "CIFAR10",
-            "kwargs":
+            "num_classes": 10,
+            "dataloader-kwargs":
             {
                 "batch_size": 32,
                 "num_workers": 4,
                 "pin_memory": false,
                 "shuffle": true
+            },
+            "trainset-kwargs":
+            {
+                "download": false,
+                "train": true
+            },
+            "valset-kwargs":
+            {
+                "download": false,
+                "train": false
             }
         },
         {
             "dataset": "CIFAR100",
-            "kwargs":
+            "num_classes": 100,
+            "dataloader-kwargs":
             {
                 "batch_size": 32,
                 "num_workers": 4,
                 "pin_memory": false,
                 "shuffle": true
+            },
+            "trainset-kwargs":
+            {
+                "download": false,
+                "train": true
+            },
+            "valset-kwargs":
+            {
+                "download": false,
+                "train": false
             }
         }
     ],
