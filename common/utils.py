@@ -151,25 +151,6 @@ def save_checkpoint(state, is_best, checkpoint):
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.zip'))
 
 
-def matplotlib_imshow(img, one_channel=False):
-    """ 
-    helper function to show an image
-
-    Args:
-        img: (tensor) 2D image
-
-    """
-    if one_channel:
-        img = img.mean(dim=0)
-    # un-normalize
-    img = img / 2 + 0.5 
-    npimg = img.numpy()
-    if one_channel:
-        plt.imshow(npimg, cmap='Greys')
-    else:
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-
-
 def print_net_summary(log, net, input):
     """ 
     Print the net summary into a log file 
