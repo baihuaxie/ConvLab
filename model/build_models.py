@@ -4,8 +4,6 @@
 
 from model.model_utils import mapping
 
-from model import resnet, mnasnet, resnet_ImageNet
-
 def get_network_builder(name):
     """
     Returns the network builer function by name

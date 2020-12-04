@@ -22,7 +22,7 @@
             {
                 "type": "MultiStepLR"
             },
-	    "num_epochs": 30
+            "num_epochs": 3
         }
     ]
 }
