@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/home/baihuaxie/anaconda3/bin/python",
+    "python.pythonPath": "C:\\Users\\bhxie\\anaconda3\\python",
     "python.envFile": "${workspaceFolder}/dev.env",
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "D:\\Github\\conv-nets"

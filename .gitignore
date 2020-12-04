@@ -30,5 +30,5 @@
 97_assets/*
 **/98_notes/**
 jobs.json
-.vscode/*
+**/.vscode/*
 *.png
