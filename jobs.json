@@ -1,61 +1,6 @@
 {
-    "jobname": "launch-test",
+    "jobname": "12/03/2020",
     "experiments": [
-        {
-            "model": 
-            {
-                "network": "resnet18"
-            },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "SGD"
-            },
-            "lr": 
-            {
-                "type": "MultiStepLR"
-            }
-        },
-        {
-            "model": 
-            {
-                "network": "resnet18"
-            },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "Adam"
-            },
-            "lr": 
-            {
-                "type": "MultiStepLR"
-            }
-        },
-        {
-            "model": 
-            {
-                "network": "resnet50"
-            },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "SGD",
-                "lr": 1e-2
-            },
-            "lr": 
-            {
-                "type": "MultiStepLR"
-            }
-        },
         {
             "model": 
             {
@@ -63,7 +8,11 @@
             },
             "data": 
             {
-                "dataset": "CIFAR10"
+                "dataset": "CIFAR100",
+		"dataloader-kwargs":
+		{
+			"batch_size": 256
+		}
             },
             "optimizer": 
             {
@@ -71,8 +20,9 @@
             },
             "lr": 
             {
-                "type": "StepLR"
-            }
+                "type": "MultiStepLR"
+            },
+	    "num_epochs": 30
         }
     ]
 }
