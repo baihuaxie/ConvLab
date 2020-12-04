@@ -194,7 +194,8 @@ if __name__ == '__main__':
     optimizer = getattr(optim, optim_type)(model.parameters(), **optim_kwargs)
 
     # build learning rate scheduler
-    scheduler = getattr(optim.lr_scheduler, lr_type)(optimizer, lr_kwargs)
+    scheduler = getattr(optim.lr_scheduler, lr_type)(optimizer, **lr_kwargs)
+    print(scheduler)
 
     # add model architecture to tensorboard & log
     images, _ = select_n_random('train', args.data_dir, trainset_kwargs, valset_kwargs, dataset, n=2)

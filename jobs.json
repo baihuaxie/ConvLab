@@ -17,62 +17,8 @@
             "lr": 
             {
                 "type": "MultiStepLR"
-            }
-        },
-        {
-            "model": 
-            {
-                "network": "resnet18"
             },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "Adam"
-            },
-            "lr": 
-            {
-                "type": "MultiStepLR"
-            }
-        },
-        {
-            "model": 
-            {
-                "network": "resnet50"
-            },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "SGD",
-                "lr": 1e-2
-            },
-            "lr": 
-            {
-                "type": "MultiStepLR"
-            }
-        },
-        {
-            "model": 
-            {
-                "network": "resnet101"
-            },
-            "data": 
-            {
-                "dataset": "CIFAR10"
-            },
-            "optimizer": 
-            {
-                "type": "SGD"
-            },
-            "lr": 
-            {
-                "type": "StepLR"
-            }
+            "num_epochs": 3
         }
     ]
 }
