@@ -195,10 +195,10 @@ if __name__ == '__main__':
 
     # build learning rate scheduler
     scheduler = getattr(optim.lr_scheduler, lr_type)(optimizer, **lr_kwargs)
-    print(scheduler)
 
     # add model architecture to tensorboard & log
-    images, _ = select_n_random('train', args.data_dir, trainset_kwargs, valset_kwargs, dataset, n=2)
+    images, _ = select_n_random('train', args.data_dir, trainset_kwargs, \
+        valset_kwargs, dataset, n=2)
     images = images.to(device)
     # 1) write architecutre to tensorboard
     writer.add_graph(model, images.float())
