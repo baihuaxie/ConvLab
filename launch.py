@@ -21,12 +21,14 @@ runs = []
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_dir', default='./experiments/', \
     help='Parent directory for all experiments')
-parser.add_argument('--data_dir', default='./data/', help="Parent \
-    directory for all datasets")
+parser.add_argument('--data_dir', default='./data/imagenet/', help="Parent \
+    directory for the dataset")
 parser.add_argument('--default_dir', default='./common/', \
     help='Directory containing default parameters.json file')
 parser.add_argument('--jobs_dir', default='./', \
     help='Directory containing jobs.json file')
+parser.add_argument('--runmode', default='train', \
+    help='main.py runmode (train or test)')
 
 
 # decorator
@@ -126,7 +128,8 @@ if __name__ == '__main__':
     for run_dir in runs:
         # launch training job with specified setting
         cmd = "{python} main.py --run_dir {run_dir} --data_dir {data_dir} \
-            --run_mode train".format(python=PYTHON, run_dir=run_dir, data_dir=args.data_dir)
+            --run_mode {runmode}".format(python=PYTHON, run_dir=run_dir, data_dir=args.data_dir, \
+                runmode=args.runmode)
         print(cmd)
         check_call(cmd, shell=True)
     

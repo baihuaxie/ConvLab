@@ -1,18 +1,14 @@
 {
-    "jobname": "12/03/2020",
+    "jobname": "12-04-2020",
     "experiments": [
         {
             "model": 
             {
-                "network": "resnet101"
+                "network": "resnet152"
             },
             "data": 
             {
-                "dataset": "CIFAR100",
-		"dataloader-kwargs":
-		{
-			"batch_size": 256
-		}
+                "dataset": "ImageNet"
             },
             "optimizer": 
             {
@@ -22,7 +18,7 @@
             {
                 "type": "MultiStepLR"
             },
-            "num_epochs": 3
+            "num_epochs": 1
         }
     ]
 }

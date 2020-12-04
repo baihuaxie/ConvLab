@@ -130,7 +130,7 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         """ forward method """
 
-        return self._forward_imp2(x)
+        return self._forward_imp1(x)
 
 
 class BottleNeck(nn.Module):
@@ -155,9 +155,9 @@ class BottleNeck(nn.Module):
             inplanes: (int) number of input channels
             planes: (int) number of output channels = planes * self.expansion
             stride: (int) stride
-            downsample: (nn.Module) downsamples output fmaps -> require dimension matching for skip connection; must set if stride > 1
-            groups: (int) number of groups
-            base_width: (int) number of channels per group
+            downsample: () downsamples output fmaps -> require dimension matching for skip connection; must set if stride > 1
+            groups: (int)
+            base_width: (int)
             dilation: (int) dilated convolution
             norm_layer: (nn.Module) normalization; default=BatchNorm2d
 
@@ -232,7 +232,8 @@ class BottleNeck(nn.Module):
     def forward(self, x):
         """ forward method """
 
-        return self._forward_imp2(x)
+        return self._forward_imp1(x)
+
 
 class ResNet(nn.Module):
     """
@@ -251,7 +252,7 @@ class ResNet(nn.Module):
 
     """
 
-    def __init__(self, block, stacks, num_classes=10, zero_init_residual=True,
+    def __init__(self, block, stacks, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None):
         """
@@ -287,9 +288,10 @@ class ResNet(nn.Module):
             raise ValueError("replace_stride_with_dilation should be None"
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
 
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=1, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         # construt residual stacks
         # 1st stack use no striding, no channel doubling (except block expansion)
@@ -305,7 +307,7 @@ class ResNet(nn.Module):
 
         # global average pooling
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(256 * block.expansion, num_classes)
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         self.dropout = nn.Dropout(p=0.2)
 
@@ -318,7 +320,7 @@ class ResNet(nn.Module):
                 nn.init.constant_(m.bias, 0)
         # zero-initiate the last BN layer in each residual block (basic or bottleneck)
         if zero_init_residual:
-            for m in self.modules():
+            for m in self.module():
                 if isinstance(m, BottleNeck):
                     nn.init.constant_(m.bn3.weight, 0)
                 elif isinstance(m, BasicBlock):
@@ -382,32 +384,37 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
 
-    def _forward_imp1(self, x):
-        """ forward method: no dropout """
-                                                                        # batch_size x 3 x H x H -> 32 x 32 on cifar-10
-        x = self.bn1(self.conv1(x))                                     # batch_size x 64 x H x H -> 32 x 32
+    def _forward_impl(self, x):
+        """ sub-routine to implement forward method """
+                                                                        # batch_size x 3 x H x H -> 224 x 224 on ImageNet
+        x = self.bn1(self.conv1(x))                                     # batch_size x 64 x H/2 x H/2 -> 112 x 112
+        x = self.maxpool(self.relu(x))                                  # batch_size x 64 x H/4 x H/4 -> 56 x 56
 
-        x = self.stack1(x)                                              # batch_size x 64*block.expansion x H/2 x H/2 -> 16 x 16
-        x = self.stack2(x)                                              # batch_size x 128*block.expansion x H/4 x H/4 -> 8 x 8
-        x = self.stack3(x)                                              # batch_size x 256*block.expansion x H/8 x H/8 -> 4 x 4
+        x = self.stack1(x)                                              # batch_size x 64*block.expansion x H/4 x H/4 -> 56 x 56
+        x = self.stack2(x)                                              # batch_size x 128*block.expansion x H/8 x H/8 -> 28 x 28
+        x = self.stack3(x)                                              # batch_size x 256*block.expansion x H/16 x H/16 -> 14 x 14
+        x = self.stack4(x)                                              # batch_size x 512*block.expansion x H/32 x H/32 -> 7 x 7
 
-        x = self.avgpool(x)                                             # batch_size x 256*block.expansion x 1 x 1
-        x = torch.flatten(x, 1)                                         # batch_size x 256*block.expansion*1*1
-        out = self.fc(x)                                                # batch_size x num_classes
+        x = self.avgpool(x)                                             # batch_size x 512*block.expansion x 1 x 1
+        x = torch.flatten(x, 1)                                         # batch_size x 512*block.expansion*1*1
+        x = self.fc(x)                                                  # batch_size x num_classes
 
-        return out
+        return x
 
     def _forward_imp2(self, x):
-        """ forward method: dropout=0.5 """
+        """ forward method: dropout """
                                                                         # batch_size x 3 x H x H -> 32 x 32 on cifar-10
         x = self.bn1(self.conv1(x))                                     # batch_size x 64 x H x H -> 32 x 32
         x = self.dropout(x)
+        x = self.maxpool(self.relu(x))
 
         x = self.stack1(x)                                              # batch_size x 64*block.expansion x H/2 x H/2 -> 16 x 16
         x = self.dropout(x)
         x = self.stack2(x)                                              # batch_size x 128*block.expansion x H/4 x H/4 -> 8 x 8
         x = self.dropout(x)
         x = self.stack3(x)                                              # batch_size x 256*block.expansion x H/8 x H/8 -> 4 x 4
+        x = self.dropout(x)
+        x = self.stack4(x)
         x = self.dropout(x)
 
         x = self.avgpool(x)                                             # batch_size x 256*block.expansion x 1 x 1
@@ -418,8 +425,7 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         """ forward method """
-        return self._forward_imp1(x)
-
+        return self._forward_impl(x)
 
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
@@ -474,7 +480,7 @@ def resnext50_32x4d(pretrained=False, progress=True, **kwargs):
     cardinality = 32
     bottleneck base_width = 4 (width_per_group)
     """
-    kwargs['groups'] = 32
+    kwargs['group'] = 32
     kwargs['width_per_group'] = 4
     return _resnet('resnext50_32x4', BottleNeck, [3, 4, 6, 4], pretrained, progress, **kwargs)
 
@@ -486,7 +492,7 @@ def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
     cardinality = 32
     bottleneck base_width = 8
     """
-    kwargs['groups'] = 32
+    kwargs['group'] = 32
     kwargs['width_per_group'] = 8
     return _resnet('resnext101_32x8d', BottleNeck, [3, 4, 23, 3], pretrained, progress, **kwargs)
 
@@ -494,7 +500,7 @@ def resnext101_32x8d(pretrained=False, progress=True, **kwargs):
 def wide_resnet50_2(pretrained=False, progress=True, **kwargs):
     """
     wide ResNet-50-2
-    - model is the same as ResNet-50, except bottleneck base_width is doubled
+    model is the same as ResNet-50, except bottleneck base_width is doubled
     """
     kwargs['width_per_group'] = 64 * 2
     return _resnet('wide_resnet50_2', BottleNeck, [3, 4, 6, 3], pretrained, progress, **kwargs)
@@ -503,7 +509,7 @@ def wide_resnet50_2(pretrained=False, progress=True, **kwargs):
 def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
     """
     wide ResNet-101-2
-    - model is the same as ResNet-101, except bottleneck base_width is doubled
+    model is the same as ResNet-101, except bottleneck base_width is doubled
     """
     kwargs['width_per_group'] = 64 * 2
     return _resnet('wide_resnet101_2', BottleNeck, [3, 4, 23, 3], pretrained, progress, **kwargs)

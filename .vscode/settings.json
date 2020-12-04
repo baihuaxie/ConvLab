@@ -4,6 +4,9 @@
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "D:\\Github\\conv-nets"
     },
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "/home/baihuaxie/Github/conv-nets"
+    },
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,

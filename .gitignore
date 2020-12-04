@@ -30,6 +30,5 @@
 97_assets/*
 **/98_notes/**
 jobs.json
-.vscode/settings.json
-jobs.json
+.vscode/*
 *.png
