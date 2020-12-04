@@ -6,7 +6,7 @@ import logging
 from tqdm import tqdm
 import numpy as np
 
-from common import utils
+from common.utils import RunningAverage
 
 def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device, writer=None):
     """
@@ -36,7 +36,7 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device,
     summ = []
 
     # initialize a running average object for loss
-    loss_avg = utils.RunningAverage()
+    loss_avg = RunningAverage()
 
     # number of batches per epoch
     num_batches = len(dataloader)
@@ -95,10 +95,10 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device,
             prog.set_postfix(loss='{:05.3f}'.format(loss_avg()))
             prog.update()
 
-        # compute mean of all metrics in summary
-        metrics_mean = {metric: np.mean([x[metric] for x in summ]) for metric in summ[0].keys()}
-        metrics_string = ' ; '.join('{}: {:5.03f}'.format(k, v) for k, v in metrics_mean.items())
+    # compute mean of all metrics in summary
+    metrics_mean = {metric: np.mean([x[metric] for x in summ]) for metric in summ[0].keys()}
+    metrics_string = ' ; '.join('{}: {:5.03f}'.format(k, v) for k, v in metrics_mean.items())
 
-        logging.info("- Train metrics: {}".format(metrics_string))
+    logging.info("- Train metrics: {}".format(metrics_string))
 
     return metrics_mean, summ
