@@ -15,6 +15,8 @@ Note:
 
 """
 
+## this is a test
+
 # python
 import argparse
 import os
@@ -32,12 +34,13 @@ from common.utils import Params, load_checkpoint, save_checkpoint, set_logger, p
 from common.objectives import loss_fn, metrics
 from common.evaluate import evaluate
 from common.train import train
+from common.plots import save_batch_summary
 from model.build_models import get_network_builder
 
 
 # commandline
 parser = argparse.ArgumentParser()
-parser.add_argument('--run_dir', default='./experiments/launch-test/resnet18_CIFAR100_SGD_MultiStepLR',
+parser.add_argument('--run_dir', default='./experiments/launch-test',
                     help='Directory containing the runset.json')
 parser.add_argument('--data_dir', default='./data/',
                     help='Directory containing the dataset')
@@ -93,8 +96,8 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
             logging.info("learning rate = {} for parameter group {}".format(param_group['lr'], i))
 
         # train for one full pass over the training set
-        train_metrics = train(model, optimizer, loss_fn, train_loader, metrics, \
-            params, epoch, device, writer)
+        train_metrics, batch_summ = train(model, optimizer, loss_fn, train_loader, \
+            metrics, params, epoch, device, writer)
 
         # evaluate for one epoch on the validation set
         val_metrics = evaluate(model, loss_fn, val_loader, metrics, params, device)
@@ -117,6 +120,9 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
             is_best=is_best,
             checkpoint=run_dir
         )
+
+        # save batch summaries
+        save_batch_summary(run_dir, batch_summ)
 
         # if best accuray
         if is_best:

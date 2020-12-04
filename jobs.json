@@ -8,7 +8,7 @@
             },
             "data": 
             {
-                "dataset": "CIFAR100"
+                "dataset": "CIFAR10"
             },
             "optimizer": 
             {
