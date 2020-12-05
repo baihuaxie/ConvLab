@@ -32,3 +32,4 @@
 jobs.json
 **/.vscode/*
 *.png
+launch-test.json
