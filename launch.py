@@ -21,12 +21,16 @@ runs = []
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_dir', default='./experiments/', \
     help='Parent directory for all experiments')
-parser.add_argument('--data_dir', default='./data/', help="Parent \
-    directory for all datasets")
+parser.add_argument('--data_dir', default='./data/imagenet/', help="Parent \
+    directory for the dataset")
 parser.add_argument('--default_dir', default='./common/', \
     help='Directory containing default parameters.json file')
 parser.add_argument('--jobs_dir', default='./', \
     help='Directory containing jobs.json file')
+parser.add_argument('--runmode', default='train', \
+    help='main.py runmode (train or test)')
+parser.add_argument('--runset', default='jobs.json', \
+    help='.json runset configuration file')
 
 
 # decorator
@@ -104,7 +108,7 @@ def create_job(run_dct, defaults):
 if __name__ == '__main__':
     args = parser.parse_args()
     # read parameters of all job runs from jobs.json
-    json_path = os.path.join(args.jobs_dir, 'jobs.json')
+    json_path = os.path.join(args.jobs_dir, args.runset)
     jobs = Params(json_path)
 
     # read default parameters
@@ -126,7 +130,8 @@ if __name__ == '__main__':
     for run_dir in runs:
         # launch training job with specified setting
         cmd = "{python} main.py --run_dir {run_dir} --data_dir {data_dir} \
-            --run_mode train".format(python=PYTHON, run_dir=run_dir, data_dir=args.data_dir)
+            --run_mode {runmode}".format(python=PYTHON, run_dir=run_dir, data_dir=args.data_dir, \
+                runmode=args.runmode)
         print(cmd)
         check_call(cmd, shell=True)
     

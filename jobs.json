@@ -1,14 +1,14 @@
 {
-    "jobname": "launch-test",
+    "jobname": "12-04-2020",
     "experiments": [
         {
             "model": 
             {
-                "network": "resnet18"
+                "network": "resnet152"
             },
             "data": 
             {
-                "dataset": "CIFAR10"
+                "dataset": "ImageNet"
             },
             "optimizer": 
             {
@@ -18,7 +18,7 @@
             {
                 "type": "MultiStepLR"
             },
-            "num_epochs": 3
+            "num_epochs": 1
         }
     ]
 }

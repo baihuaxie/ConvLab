@@ -63,7 +63,7 @@
         {
             "dataset": "CIFAR10",
             "num_classes": 10,
-            "dataloader-kwargs":
+            "trainloader-kwargs":
             {
                 "batch_size": 32,
                 "num_workers": 4,
@@ -74,6 +74,13 @@
             {
                 "download": false,
                 "train": true
+            },
+            "valloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 4,
+                "pin_memory": false,
+                "shuffle": false
             },
             "valset-kwargs":
             {
@@ -84,7 +91,7 @@
         {
             "dataset": "CIFAR100",
             "num_classes": 100,
-            "dataloader-kwargs":
+            "trainloader-kwargs":
             {
                 "batch_size": 32,
                 "num_workers": 4,
@@ -96,13 +103,40 @@
                 "download": false,
                 "train": true
             },
+            "valloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 4,
+                "pin_memory": false,
+                "shuffle": false
+            },
             "valset-kwargs":
             {
                 "download": false,
                 "train": false
             }
+        },
+        {
+            "dataset": "ImageNet",
+            "num_classes": 1000,
+            "trainloader-kwargs":
+            {
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": true
+            },
+            "trainset-kwargs":{},
+            "valloader-kwargs":
+            {
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": false
+            },
+            "valset-kwargs":{}
         }
     ],
-    "save_summary_steps": 100,
+    "save_summary_steps": 1000,
     "num_epochs": 2
 }
