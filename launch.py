@@ -29,6 +29,8 @@ parser.add_argument('--jobs_dir', default='./', \
     help='Directory containing jobs.json file')
 parser.add_argument('--runmode', default='train', \
     help='main.py runmode (train or test)')
+parser.add_argument('--runset', default='jobs.json', \
+    help='.json runset configuration file')
 
 
 # decorator
@@ -106,7 +108,7 @@ def create_job(run_dct, defaults):
 if __name__ == '__main__':
     args = parser.parse_args()
     # read parameters of all job runs from jobs.json
-    json_path = os.path.join(args.jobs_dir, 'jobs.json')
+    json_path = os.path.join(args.jobs_dir, args.runset)
     jobs = Params(json_path)
 
     # read default parameters

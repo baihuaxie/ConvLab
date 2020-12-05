@@ -40,7 +40,7 @@ from model.build_models import get_network_builder
 
 # commandline
 parser = argparse.ArgumentParser()
-parser.add_argument('--run_dir', default='./experiments/12-04-2020/resnet152_ImageNet_SGD_MultiStepLR_1',
+parser.add_argument('--run_dir', default='./experiments/launch-test/',
                     help='Directory containing the runset.json')
 parser.add_argument('--data_dir', default='./data/',
                     help='Directory containing the dataset')
@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
     ### ------ instantiations ----- ###
     # build model
-    model = get_network_builder(params.model['network'])(**model_kwargs)
+    model = get_network_builder(params.model['network'])(**model_kwargs).to(device)
 
     # build the optimizer
     optimizer = getattr(optim, optim_type)(model.parameters(), **optim_kwargs)
@@ -216,15 +216,12 @@ if __name__ == '__main__':
     logging.info('- done.')
 
     # get a single input batch, add model architecture to tensorboard & log
-    # images, labels = next(iter(val_dl))
-    # images = images.to(device)
+    images, labels = next(iter(val_dl))
+    images = images.to(device)
     # 1) write architecutre to tensorboard
-    # writer.add_graph(model, images.float())
+    writer.add_graph(model, images.float())
     # 2) write architecture to log file using torchsummary package
-    # print_net_summary(args.run_dir+'/net_summary.log', model, images)
-
-    # move model to GPU
-    model = model.to(device)
+    print_net_summary(args.run_dir+'/net_summary.log', model, images)
 
     # start training
     logging.info('Starting training for {} epoch(s)...'.format(params.num_epochs))

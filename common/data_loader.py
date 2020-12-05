@@ -83,6 +83,10 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
 
     datasets = {}
 
+    # by default
+    traindir = datadir
+    valdir = datadir
+
     # default dataset
     if dataset is None:
         dataset = 'CIFAR10'
