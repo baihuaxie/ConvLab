@@ -21,7 +21,7 @@ runs = []
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_dir', default='./experiments/', \
     help='Parent directory for all experiments')
-parser.add_argument('--data_dir', default='./data/imagenet/', help="Parent \
+parser.add_argument('--data_dir', default='./data/imagenet/images/', help="Parent \
     directory for the dataset")
 parser.add_argument('--default_dir', default='./common/', \
     help='Directory containing default parameters.json file')

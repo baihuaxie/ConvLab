@@ -1,10 +1,10 @@
 {
-    "jobname": "12-04-2020",
+    "jobname": "12-05-2020",
     "experiments": [
         {
             "model": 
             {
-                "network": "resnet152"
+                "network": "resnet50"
             },
             "data": 
             {
@@ -18,7 +18,7 @@
             {
                 "type": "MultiStepLR"
             },
-            "num_epochs": 1
+            "num_epochs": 10
         }
     ]
 }
