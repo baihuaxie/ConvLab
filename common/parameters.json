@@ -34,7 +34,7 @@
             "type": "MultiStepLR",
             "kwargs":
             {
-                "milestones": [10, 20],
+                "milestones": [0, 10, 20],
                 "gamma": 0.1
             }
         },
