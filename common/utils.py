@@ -103,7 +103,7 @@ def set_logger(log_path):
 
 
 
-def load_checkpoint(checkpoint: str, model, optimizer=None):
+def load_checkpoint(checkpoint: str, model, optimizer=None, scheduler=None):
     """
     Load model parameters (state_dict) from file. If optimizer is provided, load state_dict for optimizer.
 
@@ -111,6 +111,7 @@ def load_checkpoint(checkpoint: str, model, optimizer=None):
         checkpoint: (string) filename for loading parameters
         model: (torch.nn.Module) model object for which the parameters are loaded into
         optimizer: (torch.optim) optional - optimizer object to resume from checkpoint
+        scheduler: (torch.lr_scheduler) optional - learning rate scheduler object to resume from checkpoint
 
     Return:
         checkpoint: (dict) a dictionary object containing state_dict, optim_dict produced by torch.load(file)
@@ -123,7 +124,16 @@ def load_checkpoint(checkpoint: str, model, optimizer=None):
     model.load_state_dict(checkpoint['state_dict'])
 
     if optimizer:
-        optimizer.load_state_dict(checkpoint['optim_dict'])
+        try:
+            optimizer.load_state_dict(checkpoint['optim_dict'])
+        except KeyError:
+            print("no previous optimizer state to restore!")
+
+    if scheduler:
+        try:
+            scheduler.load_state_dict(checkpoint['scheduler_dict'])
+        except KeyError:
+            print("no previous scheduler state to restore!")
 
     return checkpoint
 

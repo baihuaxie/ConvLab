@@ -82,7 +82,7 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
         restore_path = os.path.join(run_dir, restore_file + '.pth.zip')
         if os.path.exists(restore_path):
             logging.info("Restoring weights from {}".format(restore_path))
-            load_checkpoint(restore_path, model, optimizer)
+            load_checkpoint(restore_path, model, optimizer, scheduler)
 
     best_val_accu = 0.0
 
@@ -115,7 +115,8 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
             {
                 'epoch': epoch + 1,
                 'state_dict': model.state_dict(),
-                'optim_dict': optimizer.state_dict()
+                'optim_dict': optimizer.state_dict(),
+                'scheduler_dict': scheduler.state_dict(),
             },
             is_best=is_best,
             checkpoint=run_dir
