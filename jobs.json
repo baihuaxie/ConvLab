@@ -1,10 +1,10 @@
 {
-    "jobname": "12-05-2020",
+    "jobname": "12-26-2020",
     "experiments": [
         {
             "model": 
             {
-                "network": "resnet50"
+                "network": "resnet18"
             },
             "data": 
             {
