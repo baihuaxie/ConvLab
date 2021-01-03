@@ -52,8 +52,9 @@ parser.add_argument('--run_mode', default='train', help='test mode run a subset 
 
 
 
-def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metrics, params,
-                       run_dir, device, scheduler=None, restore_file=None, writer=None):
+def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metrics, params, \
+                       run_dir, device, scheduler=None, restore_file=None, writer=None, \
+                       save_summary=True, run_flag=None):
     """
     Train the model and evaluate on every epoch
 
@@ -70,11 +71,14 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
                  batch_output and batch_labels
         params: (Params) hyperparameters
         run_dir: (string) directory containing params.json, learned weights, and logs
+        device: (str) device type; usually 'cuda:0' or 'cpu'
         restore_file: (string) optional = name of file to restore training from -> no
                       filename extension .pth or .pth.tar/gz
         writer: (tensorboard) tensorboard summary writer
-        device: (str) device type; usually 'cuda:0' or 'cpu'
-
+        save_summary: (bool) by default = True, save session summaries; if False,
+                  session summaries are not saved
+        run_flag: (str) a flag to identify each run session; by default use session run date
+                  in format of mmdd
     """
 
     # reload the weights from restore_file if specified
@@ -123,7 +127,8 @@ def train_and_evaluate(model, optimizer, train_loader, val_loader, loss_fn, metr
         )
 
         # save batch summaries
-        save_batch_summary(run_dir, batch_summ)
+        if save_summary:
+            save_batch_summary(run_dir, batch_summ, run_flag)
 
         # if best accuray
         if is_best:
@@ -227,5 +232,10 @@ if __name__ == '__main__':
     # start training
     logging.info('Starting training for {} epoch(s)...'.format(params.num_epochs))
 
+    # set flags
+    save_summary_flag = True if args.run_mode == 'train' else False
+    run_flag = params.run_flag
+
     train_and_evaluate(model, optimizer, train_dl, val_dl, loss_fn, metrics, params,
-                       args.run_dir, device, scheduler, args.restore_file, writer)
+                       args.run_dir, device, scheduler, args.restore_file, writer, \
+                       save_summary_flag, run_flag)

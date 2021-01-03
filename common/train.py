@@ -77,6 +77,8 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device,
                 summary_batch['loss'] = loss_detach.item()
                 # add 'iteration' as index
                 summary_batch['iteration'] = epoch*num_batches + i
+                # add 'epoch' as index
+                summary_batch['epoch'] = epoch+ 1
 
                 # write training summary to tensorboard if applicable
                 if writer is not None:

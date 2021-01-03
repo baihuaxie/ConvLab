@@ -10,19 +10,20 @@ import seaborn as sns
 from common.utils import Params
 
 
-def save_batch_summary(run_dir, data):
+def save_batch_summary(run_dir, data, run_flag=None):
     """
     save batch statistics into .csv file
 
     Args:
         run_dir: (str) run directory to save csv file; file name = run_dir + 'batch_summary.csv'
         data: (list of dicts) a list of dictionaries; contains key: value pairs for data
+        run_flag: (str) a flag to identify a run session; by default use run date mmdd
     """
     # get headers as all unique keys in data
     headers = set().union(*(d.keys() for d in data))
 
     # save path
-    fpath = op.join(run_dir, 'batch_summary.csv')
+    fpath = op.join(run_dir, 'batch_summary_{}.csv'.format(run_flag))
 
     if op.exists(fpath):
         # if csv file exists, append to file (without headers)
