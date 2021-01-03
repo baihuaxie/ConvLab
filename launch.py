@@ -8,7 +8,7 @@ import argparse
 from subprocess import check_call
 import sys
 
-from common.utils import Params, match_dict_by_value, dict_to_list
+from common.utils import Params, match_dict_by_value
 
 PYTHON = sys.executable
 
@@ -29,11 +29,38 @@ parser.add_argument('--jobs_dir', default='./', \
     help='Directory containing jobs.json file')
 parser.add_argument('--runmode', default='train', \
     help='main.py runmode (train or test)')
-parser.add_argument('--runset', default='jobs.json', \
+parser.add_argument('--runset', default='launch-test.json', \
     help='.json runset configuration file')
 
 
-# decorator
+# construct a run directory name string from runset dict
+def rundct_to_list(dct):
+    """
+    put all runset values in a dictionary (could by 3-level hierarchical) into a list object
+    also convert all elements into str
+
+    note:
+    - runset dict object contain
+        - key: value_dict -> where value_dict is also a dictionary; this is for parameters that
+          should be distinguished in ablation studies, e.g., network, optimizer, scheduler, and
+          their settings
+        - key: value -> where value is not an iterable object; this is for parameters that need
+          not be distinguished in ablation studies, e.g., number of epochs, etc.; this routine
+          ignores such values in the returned list
+    """
+    assert isinstance(dct, dict)
+    lst = []
+    for value in dct.values():
+        if isinstance(value, dict):
+            for val in value.values():
+                if isinstance(val, dict):
+                    lst += [str(v) for v in val.values() if v is not None]
+                else:
+                    lst.append(str(val))
+    return lst
+
+
+# decorator to register run directories
 def register(func):
     """
     Decorator: register a run directory returned by a call to create_job()
@@ -63,7 +90,7 @@ def create_job(run_dct, defaults):
     """
 
     # create run directory
-    run_dir = os.path.join(exp_dir, '_'.join(dict_to_list(run_dct)))
+    run_dir = os.path.join(exp_dir, '_'.join(rundct_to_list(run_dct)))
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
 
