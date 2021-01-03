@@ -91,7 +91,7 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
     if dataset is None:
         dataset = 'CIFAR10'
     # imagenet
-    if dataset == 'ImageNet':
+    if dataset in ['ImageNet', 'Imagenette', 'Imagewoof']:
         dataset = 'ImageFolder'
         traindir = op.join(datadir, 'train')
         valdir = op.join(datadir, 'val')

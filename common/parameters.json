@@ -135,6 +135,46 @@
                 "shuffle": false
             },
             "valset-kwargs":{}
+        },
+        {
+            "dataset": "Imagenette",
+            "num_classes": 10,
+            "trainloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": true
+            },
+            "trainset-kwargs":{},
+            "valloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": false
+            },
+            "valset-kwargs":{}
+        },
+        {
+            "dataset": "Imagewoof",
+            "num_classes": 10,
+            "trainloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": true
+            },
+            "trainset-kwargs":{},
+            "valloader-kwargs":
+            {
+                "batch_size": 32,
+                "num_workers": 6,
+                "pin_memory": true,
+                "shuffle": false
+            },
+            "valset-kwargs":{}
         }
     ],
     "save_summary_steps": 1000,
