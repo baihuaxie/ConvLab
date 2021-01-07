@@ -20,11 +20,13 @@ from stages.utils.dataset_utils import show_images, \
 @pytest.fixture(params=[
     {
         'dataset':  'CIFAR100',
-        'datadir':  '../../../data/'
+        'datadir':  '../../../data/',
+        'num_classes': 100
     },
     {
         'dataset':  'Imagenette',
-        'datadir':  '../../../data/Imagenette'
+        'datadir':  '../../../data/Imagenette',
+        'num_classes': 10
     }
 ])
 def setup(request):
@@ -59,7 +61,16 @@ def datadir(setup):
     """
     return setup['datadir']
 
-@pytest.fixture(params=[transforms.Compose([transforms.ToTensor()])])
+@pytest.fixture()
+def dataset_num_classes(setup):
+    return setup['num_classes']
+
+@pytest.fixture(params=[transforms.Compose([
+        transforms.RandomResizedCrop(160),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor()
+    ])
+])
 def transform(request):
     """
     dataset transformation
@@ -158,10 +169,10 @@ def test_show_labelled_images(select_random_train, classes, dataset):
     show_labelled_images(images, labels, classes, nrows=4, ncols=4, \
         savepath='./samples/'+dataset)
 
-def test_get_labels_counts(dataloaders):
+def test_get_labels_counts(dataloaders, dataset_num_classes):
     """
     """
     train_loader, val_loader = dataloaders
-    get_labels_counts(train_loader)
+    print(get_labels_counts(train_loader, dataset_num_classes))
 
 

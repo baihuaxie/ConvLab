@@ -16,20 +16,42 @@ meta_mapping = {
 }
 
 
-def get_labels_counts(dataloader):
+from bisect import bisect_left
+
+class discrete_cdf:
+    def __init__(self, data):
+        self._data = data # must be sorted
+        self._data_len = float(len(data))
+
+    def __call__(self, point):
+        return (len(self._data[:bisect_left(self._data, point)]) /
+                self._data_len)
+
+
+def get_labels_counts(dataloader, num_classes):
     """
-    Return a list of counts for each label class
+    Return label counts for all samples in the dataloader
 
     Args:
         dataloader: (DataLoader object)
+        num_classes: (int) number of classes
 
-    Return:
-        labels: (a list of tuples) returns a list of tuples, each tuple has two
-                elements -> 1st element is label name (int, str, etc.);
-                2nd element is label count, i.e., number of samples annotated by
-                this label in the dataloader
+    Returns:
+        counts: (np.ndarray) a numpy array of integers; counts[i] represents counts of
+                samples which have the label indexed by i in the data set
+
+    Notes:
+    - this function is for label statistics, e.g., cdf plots
+    - labels must be integer id's in the dataloader
     """
-    
+    counts = np.zeros(num_classes)
+    for _, (_, labels_batch) in enumerate(dataloader):
+        for label in labels_batch.tolist():
+            # label must be an integer id
+            assert(isinstance(label, int)), "label {} is not indexed!".format(label)
+            counts[label-1] += 1
+
+    return counts
 
 
 def get_classes(dataset, datadir):

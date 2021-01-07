@@ -7,7 +7,7 @@ import typer
 app = typer.Typer()
 
 @app.command()
-def label_cdf(labels):
+def plot_label_cdf(labels):
     """
     Plot cumulative distribution function (cdf) of class labels vs. label id's
 
