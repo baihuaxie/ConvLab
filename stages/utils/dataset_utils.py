@@ -1,7 +1,8 @@
 """
-utilities for dataset inspection
+utilities for dataset inspection stage
 """
 import pickle
+import os
 import os.path as op
 
 import matplotlib.pyplot as plt
@@ -13,6 +14,23 @@ meta_mapping = {
     'CIFAR10': 'cifar-10-batches-py/batches.meta',
     'CIFAR100': 'cifar-100-python/meta'
 }
+
+
+def get_labels_counts(dataloader):
+    """
+    Return a list of counts for each label class
+
+    Args:
+        dataloader: (DataLoader object)
+
+    Return:
+        labels: (a list of tuples) returns a list of tuples, each tuple has two
+                elements -> 1st element is label name (int, str, etc.);
+                2nd element is label count, i.e., number of samples annotated by
+                this label in the dataloader
+    """
+    
+
 
 def get_classes(dataset, datadir):
     """
@@ -71,6 +89,10 @@ def show_labelled_images(img, labels, classes, nrows=8, ncols=8, savepath=None):
         npimg = img
     else:
         raise TypeError("Image type {} not recognized".format(type(img)))
+
+    if savepath is None:
+        # by default set current working directory as savepath
+        savepath = os.getcwd()
 
     grid_sz = ncols * nrows
     fig = plt.figure(figsize=(ncols*1.5, nrows*1.5))

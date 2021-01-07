@@ -135,6 +135,8 @@ def select_n_random(dataset_type, datadir, trainset_kwargs, valset_kwargs, datas
 
     """
     dataset = fetch_dataset(dataset_type, datadir, dataset, trainset_kwargs, valset_kwargs)[dataset_type]
+    
+    # this code does not work for ImageFolder class; refactor later
     data = torch.from_numpy(dataset.data).permute(0, 3, 1, 2)
     labels = torch.Tensor(dataset.targets)
 
