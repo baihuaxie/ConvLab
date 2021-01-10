@@ -169,10 +169,12 @@ def test_show_labelled_images(select_random_train, classes, dataset):
     show_labelled_images(images, labels, classes, nrows=4, ncols=4, \
         savepath='./samples/'+dataset)
 
+@pytest.mark.skip()
 def test_get_labels_counts(dataloaders, dataset_num_classes):
     """
     """
     train_loader, val_loader = dataloaders
     print(get_labels_counts(train_loader, dataset_num_classes))
+
 
 
