@@ -20,7 +20,6 @@ def main(rundir: str = './stages/tests/directory/'):
     """
     # change to run directory
     os.chdir(rundir)
-    typer.echo(os.getcwd())
 
 if __name__ == '__main__':
     app()

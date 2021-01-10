@@ -29,7 +29,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 
-from common.data_loader import fetch_dataloader, fetch_subset_dataloader
+from common.dataloader import fetch_dataloader, fetch_subset_dataloader
 from common.utils import Params, load_checkpoint, save_checkpoint, set_logger, print_net_summary
 from common.objectives import loss_fn, metrics
 from common.evaluate import evaluate

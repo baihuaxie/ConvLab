@@ -38,6 +38,8 @@ import torchvision.datasets as ds
 from torch.utils.data import DataLoader
 from torch.utils.data import Subset
 
+from common.utility.dataloader_utils import make_weights_for_balanced_classes
+
 normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406],
     std=[0.229, 0.224, 0.225]
@@ -114,40 +116,8 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
     return datasets
 
 
-def select_n_random(dataset_type, datadir, trainset_kwargs, valset_kwargs, dataset=None, n=1):
-    """
-    Select n random [data, label] points from dataset
-
-    Args:
-        dataset_type: (str) a string of either 'train', 'val' or 'test'
-        datadir: (str) file path to the raw dataset
-        trainset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
-                         in call to fetch_dataset() for training set
-        valset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
-                       in call to fetch_dataset() for validation set
-        dataset: (str) name of dataset
-        n: (int) number of selected data samples
-
-    Return:
-        n data points + corresponding labels (both tensors)
-        data: (tensor) data points stored in ndarrays
-        labels: (tensor) labels stored in ndarrays
-
-    """
-    dataset = fetch_dataset(dataset_type, datadir, dataset, trainset_kwargs, valset_kwargs)[dataset_type]
-    
-    # this code does not work for ImageFolder class; refactor later
-    data = torch.from_numpy(dataset.data).permute(0, 3, 1, 2)
-    labels = torch.Tensor(dataset.targets)
-
-    assert len(data) == len(labels)
-
-    perm = torch.randperm(len(data))
-    return data[perm][:n], labels[perm][:n]
-
-
-
-def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwargs, valloader_kwargs, valset_kwargs):
+def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
+    valset_kwargs, sampler=None, balanced=False):
     """
     Fetches the dataloader objects for each type from datadir.
 
@@ -168,19 +138,37 @@ def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwarg
 
     dataloaders = {}
 
-    for split in ['train', 'val']:
-        if split in types:
+    # fetch dataset
+    fetched_data = fetch_dataset(types, datadir, dataset, trainset_kwargs, valset_kwargs)
 
-            # apply train set tranforms if train data
-            if split == 'train':
-                trainset = fetch_dataset(split, datadir, dataset, trainset_kwargs, valset_kwargs)['train']
-                dataloader = DataLoader(trainset, **trainloader_kwargs)
+    for split in types:
+        if split in ['train', 'val', 'test']:
 
-            # apply val set transforms if val data
-            if split == 'val':
-                valset = fetch_dataset(split, datadir, dataset, trainset_kwargs, valset_kwargs)['val']
-                dataloader = DataLoader(valset, **valloader_kwargs)
+            data = fetched_data[split]
 
+            # dataloader kwargs
+            loader_kwargs = trainloader_kwargs if split == 'train' else valloader_kwargs
+
+            # add label-balanced sampler if 'balanced' flag is set to True
+            if balanced:
+                # the following code snippet only works for ImageFolder calss
+                assert isinstance(data, ds.ImageFolder), "dataset type {} not supported by label-balanced sampling"\
+                    .format(type(data))
+                weights = make_weights_for_balanced_classes(data.imgs, len(data.classes))
+                weights = torch.DoubleTensor(weights)
+                sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, len(weights))
+
+            # load dataset into DataLoader object
+            if sampler is not None:
+                dataloader = DataLoader(data, sampler=sampler, **loader_kwargs)
+            else:
+                if split == 'train':
+                    shuffle = True
+                else:
+                    shuffle = False
+                dataloader = DataLoader(data, shuffle=shuffle, **loader_kwargs)
+
+            # add split
             dataloaders[split] = dataloader
 
     return dataloaders
@@ -212,24 +200,62 @@ def fetch_subset_dataloader(types, datadir, dataset, trainloader_kwargs, trainse
 
     dataloaders = {}
 
-    for split in ['train', 'val']:
-        if split in types:
+    # fetch dataset
+    fetched_dataset = fetch_dataset(types, datadir, dataset, trainset_kwargs, valset_kwargs)
 
-            # return trainset subset dataloader
+    for split in types:
+        if split in ['train', 'val', 'test']:
+
+            data = fetched_dataset[split]
+
+            # dataloader kwargs
+            loader_kwargs = trainloader_kwargs if split == 'train' else valloader_kwargs
+
+            # get subset indices
+            subset_indices = range(batchsz * batch_num)
+            data_subset = Subset(data, subset_indices)
+
+            # load dataset into DataLoader object
             if split == 'train':
-                trainset = fetch_dataset(split, datadir, dataset, trainset_kwargs, valset_kwargs)['train']
-                subset_indices = range(batchsz * batch_num)
-                trainset_subset = Subset(trainset, subset_indices)
-                dataloader = DataLoader(trainset_subset, **trainloader_kwargs)
-
-            # return valset subset dataloader
-            if split == 'val':
-                valset = fetch_dataset(split, datadir, dataset, trainset_kwargs, valset_kwargs)['val']
-                subset_indices = range(batchsz * batch_num)
-                valset_subset = Subset(valset, subset_indices)
-                dataloader = DataLoader(valset_subset, **valloader_kwargs)
+                shuffle = True
+            else:
+                shuffle = False
+            dataloader = DataLoader(data_subset, shuffle=shuffle, **loader_kwargs)
 
             dataloaders[split] = dataloader
 
     return dataloaders
 
+
+def select_n_random(dataset_type, datadir, trainset_kwargs, valset_kwargs, dataset=None, n=1):
+    """
+    Select n random [data, label] points from dataset
+
+    Args:
+        dataset_type: (str) a string of either 'train', 'val' or 'test'
+        datadir: (str) file path to the raw dataset
+        trainset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
+                         in call to fetch_dataset() for training set
+        valset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
+                       in call to fetch_dataset() for validation set
+        dataset: (str) name of dataset
+        n: (int) number of selected data samples
+
+    Return:
+        n data points + corresponding labels (both tensors)
+        data: (tensor) data points stored in ndarrays
+        labels: (tensor) labels stored in ndarrays
+
+    """
+    dataset = fetch_dataset(dataset_type, datadir, dataset, trainset_kwargs, valset_kwargs)[dataset_type]
+
+    # the following code snippet does not work for ImageFolder calss
+    assert not isinstance(dataset, ds.ImageFolder), "dataset type {} not supported by label-balanced sampling"\
+        .format(type(dataset))
+    data = torch.from_numpy(dataset.data).permute(0, 3, 1, 2)
+    labels = torch.Tensor(dataset.targets)
+
+    assert len(data) == len(labels)
+
+    perm = torch.randperm(len(data))
+    return data[perm][:n], labels[perm][:n]

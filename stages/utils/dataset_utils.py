@@ -4,16 +4,76 @@ utilities for dataset inspection stage
 import pickle
 import os
 import os.path as op
+import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+
+from common.utils import Params, set_logger
+from common.dataloader import fetch_dataloader
 
 global meta_mapping
 meta_mapping = {
     'CIFAR10': 'cifar-10-batches-py/batches.meta',
     'CIFAR100': 'cifar-100-python/meta'
 }
+
+
+class Dataset(object):
+    """
+    An object to fetch and load dataset into DataLoader objects as configured
+    """
+    def __init__(self, json_path=None):
+        """
+        Initialize dataset configurations from .json file
+
+        Args:
+            json_path: (str) path to runset.json file; default is the current working
+                       diretory by os.getcwd()
+        """
+        # run_directory
+        if json_path is None:
+            run_dir = os.path.join(os.getcwd(), '01_dataset')
+        else:
+            run_dir = json_path
+
+        # read .json
+        json_path = os.path.join(run_dir, 'runset.json')
+        assert os.path.isfile(json_path), "No json configuration file found at \
+            {}".format(json_path)
+        params = Params(json_path)
+
+        # get dataset parameters from runset.json
+        self.dataset = params.data['dataset']
+        self.datadir = params.data['datadir']
+        self.num_classes = params.data['num_classes']
+        self.trainloader_kwargs = params.data['trainloader-kwargs']
+        self.trainset_kwargs = params.data['trainset-kwargs']
+        self.valloader_kwargs = params.data['valloader-kwargs']
+        self.valset_kwargs = params.data['valset-kwargs']
+
+        # set the logger
+        set_logger(os.path.join(run_dir, 'dataset.log'))
+
+
+    def dataloader(self):
+        """
+        Fetch and Load dataset into train / val DataLoader objects
+        """
+
+        logging.info('Loading dataset...')
+
+        # fetch data into DataLoader
+        data_loaders = fetch_dataloader(['train', 'val'], self.datadir, self.dataset, \
+                self.trainloader_kwargs, self.trainset_kwargs, self.valloader_kwargs, \
+                self.valset_kwargs)
+        train_dl = data_loaders['train']
+        val_dl = data_loaders['val']
+
+        logging.info('Done.')
+
+        return train_dl, val_dl
 
 
 
