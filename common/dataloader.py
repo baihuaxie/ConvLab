@@ -44,8 +44,9 @@ normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406],
     std=[0.229, 0.224, 0.225]
 )
-# transforms pipeline for train set
-train_transform = transforms.Compose(
+# default transforms pipeline for train set
+# standard ImageNet practice
+default_train_transform = transforms.Compose(
     [
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
@@ -54,8 +55,9 @@ train_transform = transforms.Compose(
     ]
 )
 
-# transforms pipeline for val set
-val_transform = transforms.Compose(
+# default transforms pipeline for val set
+# standard ImageNet practice
+default_val_transform = transforms.Compose(
     [
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -64,7 +66,8 @@ val_transform = transforms.Compose(
     ]
 )
 
-def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwargs=None):
+def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwargs=None, \
+    train_transform=None, val_transform=None):
     """
     Fetches the dataset objects from torchvision.datasets
 
@@ -78,6 +81,8 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
                          in call to fetch_dataset() for training set
         valset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
                        in call to fetch_dataset() for validation set
+        train_transform: (tochvision.transforms) object for train set data augmentation pipeline
+        val_transform: (tochvision.transforms) object for validation set data augmentation pipeline
 
     Returns:
         dataset: (dict) contains the dataset object for each type in types
@@ -88,6 +93,12 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
     # by default
     traindir = datadir
     valdir = datadir
+
+    # transforms
+    if train_transform is None:
+        train_transform = default_train_transform
+    if val_transform is None:
+        val_transform = default_val_transform
 
     # default dataset
     if dataset is None:
@@ -103,23 +114,25 @@ def fetch_dataset(types, datadir, dataset=None, trainset_kwargs=None, valset_kwa
 
             # load train set
             if split == 'train':
-                dataset = getattr(ds, dataset)(traindir, transform=train_transform, \
+                data = getattr(ds, dataset)(traindir, transform=train_transform, \
                     **trainset_kwargs)
 
             # load val set
             if split == 'val':
-                dataset = getattr(ds, dataset)(valdir, transform=val_transform, \
+                data = getattr(ds, dataset)(valdir, transform=val_transform, \
                     **valset_kwargs)
 
-            datasets[split] = dataset
+            datasets[split] = data
 
     return datasets
 
 
 def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
-    valset_kwargs, sampler=None, balanced=False):
+    valset_kwargs, train_transform=None, val_transform=None, sampler=None, balanced=False):
     """
     Fetches the dataloader objects for each type from datadir.
+
+    Note: by default load full training / validation / test datasets
 
     Args:
         types: (list) has one or more of "train, val, test" depending on the dataset
@@ -131,6 +144,10 @@ def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwarg
         valloader_kwargs: (dict) keyword arguments passed to Dataloader() function for validation set
         valset_kwargs: (dict) keyword arguments passed to torchvision.dataset.Dataset() function call
                        in call to fetch_dataset() for validation set
+        train_transform: (tochvision.transforms) object for train set data augmentation pipeline
+        val_transform: (tochvision.transforms) object for validation set data augmentation pipeline
+        sampler: (torch.utils.data.sampler object) if specified, use to draw samples from dataset
+        balanced: (bool) if True use label-balanced sampler
 
     Returns:
         dataloadr: (dict) contains the DataLoader objects for each type in types
@@ -139,7 +156,8 @@ def fetch_dataloader(types, datadir, dataset, trainloader_kwargs, trainset_kwarg
     dataloaders = {}
 
     # fetch dataset
-    fetched_data = fetch_dataset(types, datadir, dataset, trainset_kwargs, valset_kwargs)
+    fetched_data = fetch_dataset(types, datadir, dataset, trainset_kwargs, valset_kwargs, \
+        train_transform, val_transform)
 
     for split in types:
         if split in ['train', 'val', 'test']:
@@ -229,7 +247,8 @@ def fetch_subset_dataloader(types, datadir, dataset, trainloader_kwargs, trainse
 
 def select_n_random(dataset_type, datadir, trainset_kwargs, valset_kwargs, dataset=None, n=1):
     """
-    Select n random [data, label] points from dataset
+    Select n random [data, label] points from dataset.
+    Note: do not support ImageFolder class; use fetch_dataloaders with balanced=True instead
 
     Args:
         dataset_type: (str) a string of either 'train', 'val' or 'test'
@@ -243,13 +262,12 @@ def select_n_random(dataset_type, datadir, trainset_kwargs, valset_kwargs, datas
 
     Return:
         n data points + corresponding labels (both tensors)
-        data: (tensor) data points stored in ndarrays
-        labels: (tensor) labels stored in ndarrays
+        data: (tensor)
+        labels: (tensor)
 
     """
     dataset = fetch_dataset(dataset_type, datadir, dataset, trainset_kwargs, valset_kwargs)[dataset_type]
 
-    # the following code snippet does not work for ImageFolder calss
     assert not isinstance(dataset, ds.ImageFolder), "dataset type {} not supported by label-balanced sampling"\
         .format(type(dataset))
     data = torch.from_numpy(dataset.data).permute(0, 3, 1, 2)
