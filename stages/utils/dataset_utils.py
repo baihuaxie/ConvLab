@@ -2,8 +2,8 @@
 utilities for dataset inspection stage
 """
 import pickle
+import json
 import os
-import os.path as op
 import logging
 
 import matplotlib.pyplot as plt
@@ -11,13 +11,7 @@ import numpy as np
 import torch
 
 from common.utils import Params, set_logger
-from common.dataloader import fetch_dataloader
-
-global meta_mapping
-meta_mapping = {
-    'CIFAR10': 'cifar-10-batches-py/batches.meta',
-    'CIFAR100': 'cifar-100-python/meta'
-}
+from common.dataloader import fetch_dataloader, select_n_random
 
 
 class Dataset(object):
@@ -59,22 +53,43 @@ class Dataset(object):
 
     def dataloader(self):
         """
-        Fetch and Load dataset into train / val DataLoader objects
+        Fetch and Load full dataset into train / val DataLoader objects
         """
 
         logging.info('Loading dataset...')
 
         # fetch data into DataLoader
-        data_loaders = fetch_dataloader(['train', 'val'], self.datadir, self.dataset, \
+        dataloaders = fetch_dataloader(['train', 'val'], self.datadir, self.dataset, \
                 self.trainloader_kwargs, self.trainset_kwargs, self.valloader_kwargs, \
                 self.valset_kwargs)
-        train_dl = data_loaders['train']
-        val_dl = data_loaders['val']
+        trainloader = dataloaders['train']
+        valloader = dataloaders['val']
 
         logging.info('Done.')
 
-        return train_dl, val_dl
+        return trainloader, valloader
 
+
+    def sampler(self, transform=None, sampler=None, balanced=False):
+        """
+        Return a batch of (data, labels) sampled at random or by a specific sampler
+        
+        Args:
+            sampler: (torch.utils.data.sampler object)
+            balanced: (bool) if True use label-balanced sampling; this is the default sampler
+                      for ImageFolder class datasets
+        """
+        if self.dataset in ['CIFAR10', 'CIFAR100']:
+            return select_n_random('train', self.datadir, {}, {}, self.dataset, \
+                n=self.trainloader_kwargs['batch_size'])
+        
+        elif self.dataset in ['Imagenette', 'Imnagewoof']:
+            dataloaders = fetch_dataloader(['train'], self.datadir, self.dataset, \
+                self.trainloader_kwargs, self.trainset_kwargs, self.valloader_kwargs, \
+                self.valset_kwargs, transform, transform, sampler=sampler, balanced=balanced)
+            trainloader = dataloaders['train']
+            # return a single batch of data only
+            return next(iter(trainloader))
 
 
 def get_labels_counts(dataloader, num_classes):
@@ -103,31 +118,66 @@ def get_labels_counts(dataloader, num_classes):
     return counts
 
 
+global meta_mapping
+meta_mapping = {
+    'CIFAR10': 'cifar-10-batches-py/batches.meta',
+    'CIFAR100': 'cifar-100-python/meta',
+    'Imagenette': 'labels.json'
+    
+}
+
 def get_classes(dataset, datadir):
     """
-    return class names from dataset meta file as a list of strings
+    return class names from dataset meta file / json file as a list of strings
+
+    Note:
+    - in dataloader object, the labels are usually integer id's
+    - get_classes() returns a list of strings, where list[i] == class name string for
+      label id == i; this is an assumption, not a guarantee by this function
+    - get_classes() obtains the class namestrings from dataset meta file; while dataloaders
+      typically assign the labels when fetching & loading the data samples; it is up to
+      the user of this function to ensure that the dataset meta file has matching label id
+      & class namestrings;
+      for ImageFolder class datasets, this usually can be done by ordering the class
+      namestrings in the meta file with the same order of the sub folders on disk
     """
     try:
-        meta_path = op.join(datadir, meta_mapping[dataset])
+        meta_path = os.path.join(datadir, meta_mapping[dataset])
     except KeyError:
         raise "dataset {} meta path not registered".format(dataset)
 
-    assert op.isfile(meta_path), "No meta file found at {} for dataset {}".format( \
+    assert os.path.isfile(meta_path), "No meta file found at {} for dataset {}".format( \
         meta_path, dataset)
+
     with open(meta_path, 'rb') as fo:
-        dct = pickle.load(fo, encoding='ASCII')
-    for key, value in dct.items():
-        if 'label' in key and isinstance(value, (list, tuple)):
-            return value
-    raise ValueError("labels not found!")
+        # for .json meta files
+        if '.json' in meta_path:
+            dct = json.load(fo)
+        # for other format use pickle
+        else:
+            dct = pickle.load(fo, encoding='ASCII')
+    # for CIFAR-10/100
+    if dataset in ['CIFAR10', 'CIFAR100']:
+        labels = []
+        for key, value in dct.items():
+            if 'fine' in key and isinstance(value, (list, tuple)):
+                # CIFAR-10/100 labels are divided into fine & coarse; usually use only fine labels
+                # e.g., CIFAR100 has 100 fine labels + 20 coarse labels
+                labels.extend(value)
+        return labels
+    # for ImageFolder dataset with .json label files
+    elif '.json' in meta_path:
+        return [value for value in dct.values()]
+
+    raise ValueError("labels not found in meta file {}!".format(meta_path))
 
 
 def show_images(img):
     """
-    print images
+    print a single image
 
     Args:
-        img: (np.ndarray or tensor) images
+        img: (np.ndarray or tensor) image object
     """
     if isinstance(img, torch.Tensor):
         npimg = img.numpy()
@@ -139,11 +189,12 @@ def show_images(img):
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
-def show_labelled_images(img, labels, classes, nrows=8, ncols=8, savepath=None):
+def show_labelled_images(dataset, img, labels, classes, nrows=8, ncols=8, savepath=None):
     """
     print images in a grid with actual labels as image titles
 
     Args:
+        dataset: (str) dataset name
         img: (tensor or np.ndarray) images; shape = BxCxHxW
         labels: (tensor or np.ndarray) label indices; shape = Bx1
         classes: (list of str) a list of strings for class names
@@ -165,6 +216,9 @@ def show_labelled_images(img, labels, classes, nrows=8, ncols=8, savepath=None):
         # by default set current working directory as savepath
         savepath = os.getcwd()
 
+    if not os.path.exists(savepath):
+        os.makedirs(savepath)
+
     grid_sz = ncols * nrows
     fig = plt.figure(figsize=(ncols*1.5, nrows*1.5))
     for idx in range(0, npimg.shape[0]):
@@ -181,7 +235,7 @@ def show_labelled_images(img, labels, classes, nrows=8, ncols=8, savepath=None):
         # create a new fig object once current grid is full
         if (idx + 1) % grid_sz == 0 or idx == npimg.shape[0]-1:
             fig.subplots_adjust(hspace=0.5)
-            plt.savefig(savepath + "_{}.png".format(idx // grid_sz))
+            plt.savefig(savepath + "/{}_{}.png".format(dataset, idx // grid_sz))
             plt.show()
             if (idx + 1) % grid_sz == 0:
                 fig = plt.figure(figsize=(ncols*1.5, nrows*1.5))
