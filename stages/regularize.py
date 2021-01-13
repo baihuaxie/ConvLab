@@ -1,5 +1,5 @@
 """
-Train the model
+Regularize the model
 
 Usage:
 
@@ -14,8 +14,6 @@ Note:
       in this file are all torch.tensor objects
 
 """
-
-## this is a test
 
 # python
 import argparse

@@ -12,3 +12,5 @@ launch-test.json
 dev.env
 .pylintrc
 **__pycache__**
+**.log**
+
