@@ -6,15 +6,13 @@
         "trainloader-kwargs": {
             "batch_size": 256,
             "num_workers": 6,
-            "pin_memory": true,
-            "shuffle": true
+            "pin_memory": true
         },
         "trainset-kwargs": {},
         "valloader-kwargs": {
             "batch_size": 256,
             "num_workers": 6,
-            "pin_memory": true,
-            "shuffle": false
+            "pin_memory": true
         },
         "valset-kwargs": {}
     }
