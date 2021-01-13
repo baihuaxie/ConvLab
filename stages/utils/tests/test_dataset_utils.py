@@ -10,7 +10,7 @@ from torchvision.transforms import transforms
 from torchvision.utils import make_grid
 import torchvision.datasets as ds
 
-from common.data_loader import fetch_dataloader, select_n_random
+from common.dataloader import select_n_random, fetch_dataloader
 from common.utils import Params, match_dict_by_value
 
 from stages.utils.dataset_utils import show_images, \
@@ -101,6 +101,9 @@ def kwargs(dataset):
 def dataloaders(dataset, datadir, transform, kwargs):
     """
     Fetch and load dataset into dataloader object
+
+    Note:
+    - did not use common fetch_dataloader() directly here to leave option to test transforms as well
     """
     print(dataset)
 
@@ -137,23 +140,35 @@ def classes(dataset, datadir):
     return get_classes(dataset, datadir)
 
 
-@pytest.mark.skip()
-def select_random_train(dataset, datadir):
+@pytest.fixture
+def samples(dataset, datadir, kwargs, transform):
     """
-    select n random data points from training set
-    """
-    trainset_kwargs = {}
-    valset_kwargs = {}
-    return select_n_random('train', datadir, trainset_kwargs, \
-        valset_kwargs, dataset, n=20)
+    Get 1 batch of random or label-balanced samples from training set
 
+    Returns a tuple of (images, labels); both are tensors
+    """
+    if dataset in ['CIFAR10', 'CIFAR100']:
+        trainset_kwargs = {}
+        valset_kwargs = {}
+        return select_n_random('train', datadir, trainset_kwargs, \
+            valset_kwargs, dataset, n=20)
+
+    elif dataset in ['Imagenette', 'Imagewoof']:
+        trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
+            valset_kwargs = kwargs
+        dataloaders = fetch_dataloader(['train'], datadir, dataset, \
+            trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
+            valset_kwargs, transform, transform, balanced=True)
+        trainloader = dataloaders['train']
+        # return a single batch of data only
+        return next(iter(trainloader))
 
 @pytest.mark.skip()
-def test_imshow(select_random_train):
+def test_imshow(samples):
     """
-    print images
+    Print images
     """
-    images, _ = select_random_train
+    images, _ = samples
     print(images.shape)
     # make_grid input must be BxCxHxW in shape
     img_grid = make_grid(images)
@@ -161,20 +176,34 @@ def test_imshow(select_random_train):
     plt.show()
 
 
-@pytest.mark.skip()
-def test_show_labelled_images(select_random_train, classes, dataset):
+def test_show_labelled_images(samples, classes, dataset):
     """
+    Print images along with labels
     """
-    images, labels = select_random_train
-    show_labelled_images(images, labels, classes, nrows=4, ncols=4, \
-        savepath='./samples/'+dataset)
+    images, labels = samples
+    show_labelled_images(dataset, images, labels, classes, nrows=4, ncols=4, \
+        savepath='./samples/')
+
 
 @pytest.mark.skip()
 def test_get_labels_counts(dataloaders, dataset_num_classes):
     """
     """
-    train_loader, val_loader = dataloaders
+    train_loader, _ = dataloaders
     print(get_labels_counts(train_loader, dataset_num_classes))
+
+
+def test_get_classes(dataset, datadir):
+    """
+    """
+    labels = get_classes(dataset, datadir)
+    print(labels)
+    if dataset is 'CIFAR10':
+        assert len(labels) == 10
+    if dataset is 'CIFAR100':
+        assert len(labels) == 100
+    if dataset in ['Imagenette', 'Imagewoof']:
+        assert len(labels) == 10
 
 
 
