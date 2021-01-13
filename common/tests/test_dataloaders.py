@@ -58,7 +58,6 @@ def datadir(setup):
 def dataset_num_classes(setup):
     return setup['num_classes']
 
-
 @pytest.fixture()
 def kwargs(dataset):
     """
@@ -79,14 +78,22 @@ def kwargs(dataset):
         valset_kwargs
 
 
-def test_fetch_dataloaders(dataset, datadir, kwargs):
+@pytest.fixture(params=[])
+def transform(request):
+    """
+    dataset transformation
+    """
+    return request.param
+
+
+def test_fetch_dataloaders(dataset, datadir, kwargs, transform):
     """
     """
     trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
         valset_kwargs = kwargs
     dataloaders = fetch_dataloader(['train'], datadir, dataset, \
         trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
-        valset_kwargs, balanced=True)
+        valset_kwargs, transform, transform, balanced=True)
 
 
 def test_fetch_subset_dataloaders(dataset, datadir, kwargs):
