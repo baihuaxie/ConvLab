@@ -103,7 +103,7 @@ def set_logger(log_path):
 
 
 
-def load_checkpoint(checkpoint: str, model, optimizer=None, scheduler=None):
+def load_checkpoint(checkpoint, model, optimizer=None, scheduler=None):
     """
     Load model parameters (state_dict) from file. If optimizer is provided, load state_dict for optimizer.
 
@@ -123,13 +123,13 @@ def load_checkpoint(checkpoint: str, model, optimizer=None, scheduler=None):
     checkpoint = torch.load(checkpoint)
     model.load_state_dict(checkpoint['state_dict'])
 
-    if optimizer:
+    if optimizer is not None:
         try:
             optimizer.load_state_dict(checkpoint['optim_dict'])
         except KeyError:
             print("no previous optimizer state to restore!")
 
-    if scheduler:
+    if scheduler is not None:
         try:
             scheduler.load_state_dict(checkpoint['scheduler_dict'])
         except KeyError:
@@ -138,7 +138,7 @@ def load_checkpoint(checkpoint: str, model, optimizer=None, scheduler=None):
     return checkpoint
 
 
-def save_checkpoint(state, is_best, checkpoint):
+def save_checkpoint(state, is_best=False, checkpoint=None, checkpoint_name=None):
     """
     Saves model and training states as state_dict into checkpoint + 'last.pth.zip'
     If is_best == True, also saves into checkpoint + 'best.pth.zip'
@@ -149,33 +149,36 @@ def save_checkpoint(state, is_best, checkpoint):
         checkpoint: (str) folder name used to save states file(s)
 
     """
+    if checkpoint_name is None:
+        checkpoint_name = 'last'
+    filepath = os.path.join(checkpoint, checkpoint_name+'.pth.zip')
 
-    filepath = os.path.join(checkpoint, 'last.pth.zip')
     if not os.path.exists(checkpoint):
         print("Checkpoint directory does not exist, making directory: {}".format(checkpoint))
         os.mkdir(checkpoint)
 
-    torch.save(state, filepath)
+    if not os.path.exists(filepath):
+        torch.save(state, filepath)
 
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.zip'))
 
 
-def print_net_summary(log, net, input):
-    """ 
-    Print the net summary into a log file 
+def print_net_summary(log, net, x):
+    """
+    Print the net summary into a log file
 
     Args:
         log: (str) log file path
         net: (nn.Module) network instance
-        input: (torch.Tensor) input tensor of size [batch, channel, ...]
+        x: (torch.Tensor) input tensor of size [batch, channel, ...]
 
     """
 
     original_stdout = sys.stdout
     with open(log, 'w') as f:
         sys.stdout = f
-        summary(net, input_size=tuple(input.size()[1:]))
+        summary(net, input_size=tuple(x.size()[1:]))
     sys.stdout = original_stdout
     f.close()
 
