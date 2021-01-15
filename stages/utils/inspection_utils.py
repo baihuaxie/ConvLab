@@ -4,10 +4,12 @@
 
 import os
 import logging
+from tqdm import tqdm
 
 import torch
+from torch.utils.data import DataLoader
 
-from common.utils import set_logger, save_checkpoint, load_checkpoint
+from common.utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
 from common.trainer import Trainer
 
 
@@ -39,117 +41,146 @@ class InspectionTrainer(Trainer):
         set_logger(os.path.join(self.run_dir, '02_inspection.log'))
 
 
-    def train(self, dataloader=None, epochs=0, batches=1):
+    def train(self, dataloader=None, iterations=1, full_epoch=False, restore_file=None, ground_input=False):
         """
         Run Training on 'dataloader' as input for several batches
 
         Args:
             dataloader: (DataLoader object) iterator to dataset
-            epochs: (int) number of training epochs
-            batches: (int) number of batches to train; this option should only be used when
-                     'epochs' is set to 0, i.e., train for partial epoch
-
-        Returns:
-            summ: (list of dicts) a list of dictionaries, each contains training summary
-                  for one iteration; a summary consists of metric: value pairs
-
-        Note:
-        - number of iterations = 'epochs' * len(dataloader) + 'batches'
+            iterations: (int) number of training iterations
+            full_epoch: (bool) if True train for a full epoch
+            restore_file: (str) if specified, evaluated the pretrained model;
+                          by default evalaute the current model state
+            ground_input: (bool) if True, tie data batches to zeros; this is for training
+                         an input-independent baseline
         """
-        return self._train(dataloader, epochs, batches)
+        if restore_file is not None:
+            self.load(restore_file)
+        return self._train(dataloader, iterations, full_epoch, ground_input=ground_input)
 
 
-    def eval(self, dataloader=None, epochs=0, batches=1, restore_file=None):
+    def eval(self, dataloader=None, iterations=1, full_epoch=False, restore_file=None):
         """
         Evaluate the model
 
         Args:
             dataloader: (DataLoader) iterator to evaluation dataset
+            iterations: (int) number of training iterations
+            full_epoch: (bool) if True train for a full epoch
             restore_file: (str) if specified, evaluated the pretrained model;
                           by default evalaute the current model state
         """
-        return self._train(dataloader, epochs, batches, restore_file, evaluate=True)
+        return self._train(dataloader, iterations, full_epoch, restore_file, evaluate=True)
 
 
-    def _train(self, dataloader=None, epochs=0, batches=1, restore_file=None, \
-        evaluate=False):
+    def _train(self, dataloader=None, iterations=1, full_epoch=False, restore_file=None, \
+        evaluate=False, ground_input=False):
         """
         Run Training / evaluation on 'dataloader' as input for several batches
 
         Args:
             dataloader: (DataLoader object) iterator to dataset
-            epochs: (int) number of training epochs
-            batches: (int) number of batches to train; this option should only be used when
-                     'epochs' is set to 0, i.e., train for partial epoch
+            iterations: (int) number of training iterations
+            full_epoch: (bool) if True train for a full epoch
             evaluate: (bool) if True use evaluation mode, if False (default) use train mode
+            ground_input: (bool) if True, tie data batches to zeros; this is for training
+                         an input-independent baseline
 
         Returns:
             summ: (list of dicts) a list of dictionaries, each contains training summary
                   for one iteration; a summary consists of metric: value pairs
 
         Note:
-        - number of iterations = 'epochs' * len(dataloader) + 'batches'
+        - this function does not support multi-epoch training
         """
         if evaluate:
             if restore_file is not None:
                 self.load(restore_file)
-            self.model.eval()
+            self._model.eval()
         else:
-            self.model.train()
+            self._model.train()
 
         # training summary
         summ = []
 
-        # number of training iterations
-        num_batches = epochs * len(dataloader) + batches
+        # loss running avg
+        loss_avg = RunningAverage()
+
+        # FLAG: ground input
+        if ground_input:
+            logging.info("Training batches have been grounded...")
+
+        # use progress bar & running avg loss for larger training runs
+        display_thres = 50
+        if iterations > display_thres:
+            prog = tqdm(total=iterations)
+
+        # train for a full epoch
+        if full_epoch:
+            iterations = len(dataloader)
+
+        # get an iterator to dataloader
+        # this code should be placed outside any loop, as it creates a new
+        # instance each time iter() is called, would be very slow
+        dataloader_iter = iter(dataloader)
 
         # use next() to iterate over dataloader; this is more efficient than
-        # standard enumerate(dataloader) if only a few batches are needed
-        for idx in range(num_batches):
+        # standard enumerate(dataloader) if training is expected to be <= 1 epoch
+        for idx in range(iterations):
 
-            train_batch, labels_batch = next(iter(dataloader))
+            train_batch, labels_batch = next(dataloader_iter)
+
+            # ground input
+            if ground_input:
+                train_batch = torch.zeros(train_batch.shape, dtype=torch.float32)
 
             # move to GPU if available
-            if self.cuda:
-                train_batch, labels_batch = train_batch.to(self.device, \
-                    non_blocking=True), labels_batch.to(self.device, non_blocking=True)
+            if self._cuda:
+                train_batch, labels_batch = train_batch.to(self._device, \
+                    non_blocking=True), labels_batch.to(self._device, non_blocking=True)
 
             # compute model output
             if evaluate:
                 with torch.no_grad():
-                    output_batch = self.model(train_batch)
+                    output_batch = self._model(train_batch)
             else:
-                output_batch = self.model(train_batch)
+                output_batch = self._model(train_batch)
 
             # compute loss
-            loss = self.loss_fn(output_batch, labels_batch)
+            loss = self._loss_fn(output_batch, labels_batch)
+            loss_detached = loss.detach()
+
+            if not evaluate:
+                # clear previous gradients, back-propagate gradients of loss w.r.t. all parameters
+                self._optimizer.zero_grad()
+                loss.backward()
+                # update weights
+                self._optimizer.step()
 
             summary_batch = {}
             # add 'loss'; detach() to save GPU memory
-            summary_batch.update({'loss': loss.detach().item()})
+            summary_batch.update({'loss': loss_detached.item()})
             # add metrics
             summary_batch.update({metric: metric_fn(output_batch.to('cpu'), \
-                labels_batch.to('cpu')) for metric, metric_fn in self.metrics.items()})
-
-            # display training progress
-            print_summary_msg(summary_batch, idx+1, num_batches)
+                labels_batch.to('cpu')) for metric, metric_fn in self._metrics.items()})
 
             # add 'iteration' as index
             summary_batch.update({'iteration': idx})
 
+            # update stats
             summ.append(summary_batch)
+            loss_avg.update(loss_detached.item())
 
-            if evaluate:
-                continue
+            # display training stats
+            if iterations <= display_thres:
+                # print as a list for smaller training runs
+                print_summary_msg(summary_batch, idx+1, iterations, evaluate=evaluate)
+            else:
+                # for larger training runs display a progress bar with running avg
+                prog.set_postfix(loss='{:05.3f}'.format(loss_avg()))
+                prog.update()
 
-            # clear previous gradients, back-propagate gradients of loss w.r.t. all parameters
-            self.optimizer.zero_grad()
-            loss.backward()
-
-            # update weights
-            self.optimizer.step()
-
-        return summ
+        return summ, loss_avg()
 
 
     def save(self, checkpoint_name=None):
@@ -161,9 +192,9 @@ class InspectionTrainer(Trainer):
         """
         save_checkpoint(
             {
-                'state_dict': self.model.state_dict(),
-                'optim_dict': self.optimizer.state_dict(),
-                'scheduler_dict': self.scheduler.state_dict(),
+                'state_dict': self._model.state_dict(),
+                'optim_dict': self._optimizer.state_dict(),
+                'scheduler_dict': self._scheduler.state_dict(),
             },
             checkpoint=self.run_dir,
             checkpoint_name=checkpoint_name
@@ -182,10 +213,10 @@ class InspectionTrainer(Trainer):
             restore_path = os.path.join(self.run_dir, restore_file+'.pth.zip')
             if os.path.exists(restore_path):
                 logging.info("Restoring weights from {}".format(restore_path))
-                load_checkpoint(restore_path, self.model, self.optimizer, self.scheduler)
+                load_checkpoint(restore_path, self._model, self._optimizer, self._scheduler)
 
 
-def print_summary_msg(summary_batch, prog, tot):
+def print_summary_msg(summary_batch, prog, tot, evaluate=False):
     """
     Display training metrics
 
@@ -193,10 +224,30 @@ def print_summary_msg(summary_batch, prog, tot):
         summary_batch: (dict) a dict object that contains metric: value pairs
         prog: (int) training progress index; e.g., iteration, epoch, etc.
         tot: (int) total number of indices
+        evaluate: (bool) if True use evaluation mode, if False (default) use train mode
     """
     metrics_string = ' ; '.join('{}: {:5.03f}'.format(k, v) for k, v in \
         summary_batch.items())
-    logging.info("- Iteration {}/{} Train metrics: {}".format(prog, tot, metrics_string))
+    session = 'Eval' if evaluate else 'Train'
+    logging.info("- Iteration {}/{} {} metrics: {}".format(prog, tot, session, metrics_string))
+
+
+def batch_loader(dataloader, length=1, samples=3):
+    """
+    Returns a DataLoader object that iterates over a single batch from 'dataloader' for 'len' times
+
+    Args:
+        dataloader: (DataLoader)
+        len: (int) length of returned DataLoader object; default=1
+        samples: (int) number of samples in the returned batch; default=3
+
+    Note:
+    - used for overfitting / evaluation anchored on a single batch of data
+    """
+    batch = next(iter(dataloader))
+    return DataLoader([batch for _ in range(length)])
+
+
 
 
 if __name__ == '__main__':
