@@ -52,28 +52,30 @@ class Trainer(object):
         lr_kwargs = params.scheduler['kwargs']
 
         # get device
-        self.cuda = torch.cuda.is_available()
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self._cuda = torch.cuda.is_available()
+        self._device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         # set random seed for reproducible experiments
         torch.manual_seed(seed)
-        if self.cuda:
+        if self._cuda:
             torch.cuda.manual_seed(seed)
 
         # build model
-        self.model = get_network_builder(params.model['network'])(**model_kwargs).to(self.device)
+        self._net_type = params.model['network']
+        # later: may need to refactor code; .to(device) creates a cpu copy first?
+        self._model = get_network_builder(self._net_type)(**model_kwargs).to(self._device)
 
         # build the optimizer
-        self.optimizer = getattr(optim, optim_type)(self.model.parameters(), **optim_kwargs)
+        self._optimizer = getattr(optim, optim_type)(self._model.parameters(), **optim_kwargs)
 
         # build learning rate scheduler
-        self.scheduler = getattr(optim.lr_scheduler, lr_type)(self.optimizer, **lr_kwargs)
+        self._scheduler = getattr(optim.lr_scheduler, lr_type)(self._optimizer, **lr_kwargs)
 
         # get loss function -> refactor loss_fn.py into registry
-        self.loss_fn = loss_fn
+        self._loss_fn = loss_fn
 
         # get metrics -> refactor metrics.py into registry
-        self.metrics = metrics
+        self._metrics = metrics
 
 
     def net_summary(self, x):
@@ -83,9 +85,9 @@ class Trainer(object):
         Args:
             x: (torch.tensor) input data
         """
-        x = x.to(self.device)
+        x = x.to(self._device)
         # write architecture to log file using torchsummary package
-        print_net_summary(self.run_dir+'/net_summary.log', self.model, x)
+        print_net_summary(self.run_dir+'/{}_summary.log'.format(self._net_type), self._model, x)
 
     
     @abstractmethod
@@ -96,7 +98,7 @@ class Trainer(object):
         raise NotImplementedError
 
     @abstractmethod
-    def evaluate(self):
+    def eval(self):
         """
         Abstract method to evaluate a pretrained model
         """
