@@ -39,8 +39,11 @@
 import os
 import typer
 
+import torch
+from torch.utils.data import DataLoader
+
 from common.utils import Params
-from stages.utils.inspection_utils import InspectionTrainer
+from stages.utils.inspection_utils import InspectionTrainer, batch_loader
 from stages.utils.dataset_utils import Dataset
 
 
@@ -48,21 +51,24 @@ app = typer.Typer()
 
 @app.command()
 def check_seed(
-    runs: int = typer.Option(3, help="number of reproducible runs")
+    runs: int = typer.Option(3, help="number of reproducible runs"),
+    restore_file: str = typer.Option('init', help='file name to restore model')
 ):
     """
     Run multiple training with fixed random seed for reproducible results
     """
-    trainer = InspectionTrainer(params, run_dir=run_dir)
-    trainer.save(checkpoint_name='init')
-    trainloader, _ = Dataset(run_dir).dataloader()
     for idx in range(runs):
+        # re-instantiate trainer to set fixed seed for each run
+        # needs refactor to speed up
+        trainer = InspectionTrainer(params, run_dir=run_dir)
+        trainer.save(checkpoint_name='init')
+
+        trainloader, _ = Dataset(run_dir).dataloader()
         # change echo() to logging.info()
         typer.echo("Fixed seed={} run {}/{}".format(trainer.seed, idx+1, runs))
-        # for some reason this code doesn't reproduce exact outputs. why?
-        # note: if I re-instantiate a new Trainer() object each run then it's ok
-        trainer.load(restore_file='init')
-        trainer.train(trainloader)
+
+        trainer.load(restore_file=restore_file)
+        trainer.train(trainloader, iterations=3)
 
 
 @app.command()
@@ -74,14 +80,31 @@ def check_init_loss():
     _, valloader = Dataset(run_dir).dataloader()
     # Q: for this check do I need to input a batch from val set?
     # Q: how to obtain the correct loss value @ init for x-ent loss function?
-    trainer.eval(valloader, batches=1)
+    trainer.eval(valloader)
 
 
 @app.command()
-def check_underfit():
+def check_underfit(
+    runs: int = typer.Option(4, help="number of runs"),
+):
     """
     Check training loss decreasing with increasing model capacity
     """
+    # later: refactor this into loading from runset.json or other general ways
+    models = ['resnet18', 'resnet34', 'resnet50', 'resnet101']
+    for idx in range(runs):
+        params.model['network'] = models[idx]
+        typer.echo("Training model {}:".format(params.model['network']))
+
+        trainer = InspectionTrainer(params, run_dir=run_dir)
+        trainloader, _ = Dataset(run_dir).dataloader()
+
+        # save net summary
+        train_batches, _ = next(iter(trainloader))
+        trainer.net_summary(train_batches)
+
+        # Q: how many batches should I train for this check?
+        trainer.train(trainloader)
 
 
 @app.command()
@@ -92,17 +115,39 @@ def check_dependency():
 
 
 @app.command()
-def train_input_grounded():
+def train_input_grounded(
+    iterations: int = typer.Option(10, help="number of iterations to train"),
+):
     """
     Train a baseline with all inputs grounded to zero
     """
+    trainloader, _ = Dataset(run_dir).dataloader()
+    trainer = InspectionTrainer(params, run_dir=run_dir)
+    trainer.train(trainloader, iterations=iterations, ground_input=True)
+    trainer.save(checkpoint_name='{}_input_grounded_baseline'.format(params.model['network']))
 
 
 @app.command()
-def train_batch_overfit():
+def overfit_batch(
+    samples: int = typer.Option(3, help="number of samples in the training batch"),
+    iterations: int = typer.Option(10, help="number of iterations to train"),
+):
     """
     Train a baseline that overfits a single batch with several samples
     """
+    trainloader, _ = Dataset(run_dir).dataloader()
+    # get a dataloader to a single batch
+    batch_dl = batch_loader(trainloader, length=iterations)
+
+    trainer = InspectionTrainer(params, run_dir=run_dir)
+    save_path = '{}_one_batch_overfit'.format(params.model['network'])
+    # refactor: need to make sure that loss can be reduced to minimal in one run
+    # batch_dl could point to different batch
+    loss_avg = 1
+    while loss_avg >= 1:
+        _, loss_avg = trainer.train(trainloader, iterations=iterations, restore_file=save_path)
+        trainer.save(checkpoint_name=save_path)
+    print(loss_avg)
 
 
 @app.command()
