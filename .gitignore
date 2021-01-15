@@ -9,6 +9,7 @@ jobs.json
 **/.vscode/*
 *.png
 launch-test.json
+**runset.json**
 dev.env
 .pylintrc
 **__pycache__**

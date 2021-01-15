@@ -1,12 +1,15 @@
 """
-    Train one epoch
+    Classes and functions for training
 """
+
 
 import logging
 from tqdm import tqdm
 import numpy as np
 
+
 from common.utils import RunningAverage
+
 
 def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device, writer=None):
     """
