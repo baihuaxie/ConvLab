@@ -40,19 +40,18 @@ import os
 import typer
 
 import torch
-from torch.utils.data import DataLoader
 
 from common.utils import Params
 from stages.utils.inspection_utils import InspectionTrainer, batch_loader
-from stages.utils.dataset_utils import Dataset
+from stages.utils.dataset_utils import Dataset, show_labelled_images, get_classes
 
 
 app = typer.Typer()
 
 @app.command()
 def check_seed(
-    runs: int = typer.Option(3, help="number of reproducible runs"),
-    restore_file: str = typer.Option('init', help='file name to restore model')
+        runs: int = typer.Option(3, help="number of reproducible runs"),
+        restore_file: str = typer.Option('init', help='file name to restore model')
 ):
     """
     Run multiple training with fixed random seed for reproducible results
@@ -63,7 +62,7 @@ def check_seed(
         trainer = InspectionTrainer(params, run_dir=run_dir)
         trainer.save(checkpoint_name='init')
 
-        trainloader, _ = Dataset(run_dir).dataloader()
+        trainloader, _ = Dataset(params=params, run_dir=run_dir).dataloader()
         # change echo() to logging.info()
         typer.echo("Fixed seed={} run {}/{}".format(trainer.seed, idx+1, runs))
 
@@ -77,7 +76,7 @@ def check_init_loss():
     Check the loss after initialization
     """
     trainer = InspectionTrainer(params, run_dir=run_dir)
-    _, valloader = Dataset(run_dir).dataloader()
+    _, valloader = Dataset(params=params, run_dir=run_dir).dataloader()
     # Q: for this check do I need to input a batch from val set?
     # Q: how to obtain the correct loss value @ init for x-ent loss function?
     trainer.eval(valloader)
@@ -85,7 +84,7 @@ def check_init_loss():
 
 @app.command()
 def check_underfit(
-    runs: int = typer.Option(4, help="number of runs"),
+        runs: int = typer.Option(4, help="number of runs"),
 ):
     """
     Check training loss decreasing with increasing model capacity
@@ -97,7 +96,7 @@ def check_underfit(
         typer.echo("Training model {}:".format(params.model['network']))
 
         trainer = InspectionTrainer(params, run_dir=run_dir)
-        trainloader, _ = Dataset(run_dir).dataloader()
+        trainloader, _ = Dataset(params=params, run_dir=run_dir).dataloader()
 
         # save net summary
         train_batches, _ = next(iter(trainloader))
@@ -116,12 +115,12 @@ def check_dependency():
 
 @app.command()
 def train_input_grounded(
-    iterations: int = typer.Option(10, help="number of iterations to train"),
+        iterations: int = typer.Option(10, help="number of iterations to train"),
 ):
     """
     Train a baseline with all inputs grounded to zero
     """
-    trainloader, _ = Dataset(run_dir).dataloader()
+    trainloader, _ = Dataset(params=params, run_dir=run_dir).dataloader()
     trainer = InspectionTrainer(params, run_dir=run_dir)
     trainer.train(trainloader, iterations=iterations, ground_input=True)
     trainer.save(checkpoint_name='{}_input_grounded_baseline'.format(params.model['network']))
@@ -129,25 +128,33 @@ def train_input_grounded(
 
 @app.command()
 def overfit_batch(
-    samples: int = typer.Option(3, help="number of samples in the training batch"),
-    iterations: int = typer.Option(10, help="number of iterations to train"),
+        samples: int = typer.Option(4, help="number of samples in the training batch"),
+        iterations: int = typer.Option(10, help="number of iterations to train"),
 ):
     """
     Train a baseline that overfits a single batch with several samples
     """
-    trainloader, _ = Dataset(run_dir).dataloader()
+    trainloader, _ = Dataset(params=params, run_dir=run_dir).dataloader()
     # get a dataloader to a single batch
-    batch_dl = batch_loader(trainloader, length=iterations)
+    batch_dl = batch_loader(trainloader, length=iterations, samples=samples)
 
     trainer = InspectionTrainer(params, run_dir=run_dir)
-    save_path = '{}_one_batch_overfit'.format(params.model['network'])
+    save_path = '{}_one_batch_overfit_last'.format(params.model['network'])
     # refactor: need to make sure that loss can be reduced to minimal in one run
-    # batch_dl could point to different batch
-    loss_avg = 1
-    while loss_avg >= 1:
-        _, loss_avg = trainer.train(trainloader, iterations=iterations, restore_file=save_path)
+    # batch_dl could point to different batch if multiple runs are launched
+    loss = 1
+    while loss > 0.1:
+        # refactor: do not load from previous run's checkpoint (bad init)
+        summ, _ = trainer.train(batch_dl, iterations=iterations, restore_file=save_path)
         trainer.save(checkpoint_name=save_path)
-    print(loss_avg)
+        loss = summ[iterations-1]['loss']
+    # add: also visualize batch data?
+    data, labels = next(iter(batch_dl))
+    batch_output = trainer.get_model().to('cpu')(data)
+    _, predicted = torch.max(batch_output, dim=1)
+    classes = get_classes(params.data['dataset'], params.data['datadir'])
+    show_labelled_images(params.data['dataset'], classes, data, labels, \
+        predicted, nrows=2, ncols=samples/2, savepath=run_dir)
 
 
 @app.command()

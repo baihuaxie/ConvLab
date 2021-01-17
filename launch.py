@@ -16,7 +16,7 @@ app.add_typer(inspection.app, name='inspection')
 
 
 @app.callback()
-def main(rundir: str = './stages/tests/directory/'):
+def main(rundir: str = './stages/tests/'):
     """
     Initializes launch directory, etc.
     """

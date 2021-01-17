@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from common.utils import Params, set_logger
+from common.utils import set_logger
 from common.dataloader import fetch_dataloader, select_n_random
 
 
@@ -18,25 +18,19 @@ class Dataset(object):
     """
     An object to fetch and load dataset into DataLoader objects as configured
     """
-    def __init__(self, json_path=None):
+    def __init__(self, params, run_dir=None):
         """
         Initialize dataset configurations from .json file
 
         Args:
-            json_path: (str) path to runset.json file; default is the current working
-                       diretory by os.getcwd()
+            params: (Params object) a dict-like object with the runset parameters
+            run_dir: (str) directory for storing output files
         """
-        # run_directory
-        if json_path is None:
-            run_dir = os.path.join(os.getcwd(), '01_dataset')
-        else:
-            run_dir = json_path
-
-        # read .json
-        json_path = os.path.join(run_dir, 'runset.json')
-        assert os.path.isfile(json_path), "No json configuration file found at \
-            {}".format(json_path)
-        params = Params(json_path)
+        # set run directory
+        if run_dir is None:
+            self.run_dir = os.getcwd()
+        assert os.path.exists(run_dir), "Directory {} does not exist!".format(run_dir)
+        self.run_dir = run_dir
 
         # get dataset parameters from runset.json
         self.dataset = params.data['dataset']
@@ -48,20 +42,23 @@ class Dataset(object):
         self.valset_kwargs = params.data['valset-kwargs']
 
         # set the logger
-        set_logger(os.path.join(run_dir, 'dataset.log'))
+        set_logger(os.path.join(self.run_dir, 'dataset.log'))
 
 
-    def dataloader(self):
+    def dataloader(self, transforms=None):
         """
         Fetch and Load full dataset into train / val DataLoader objects
-        """
 
+        Args:
+            transforms: (torchvision.transforms) data augmentation; if None, applies
+                        default ImageNet standard augmentation
+        """
         logging.info('Loading dataset...')
 
         # fetch data into DataLoader
         dataloaders = fetch_dataloader(['train', 'val'], self.datadir, self.dataset, \
                 self.trainloader_kwargs, self.trainset_kwargs, self.valloader_kwargs, \
-                self.valset_kwargs)
+                self.valset_kwargs, transforms, transforms)
         trainloader = dataloaders['train']
         valloader = dataloaders['val']
 
@@ -72,17 +69,19 @@ class Dataset(object):
 
     def sampler(self, transform=None, sampler=None, balanced=False):
         """
-        Return a batch of (data, labels) sampled at random or by a specific sampler
-        
+        Return a list of [data, labels] sampled at random or by a specific sampler
+
         Args:
             sampler: (torch.utils.data.sampler object)
             balanced: (bool) if True use label-balanced sampling; this is the default sampler
                       for ImageFolder class datasets
+        Returns:
+            list [data, labels]; same as next(iter(DataLoader object))
         """
         if self.dataset in ['CIFAR10', 'CIFAR100']:
             return select_n_random('train', self.datadir, {}, {}, self.dataset, \
                 n=self.trainloader_kwargs['batch_size'])
-        
+
         elif self.dataset in ['Imagenette', 'Imnagewoof']:
             dataloaders = fetch_dataloader(['train'], self.datadir, self.dataset, \
                 self.trainloader_kwargs, self.trainset_kwargs, self.valloader_kwargs, \
@@ -123,12 +122,16 @@ meta_mapping = {
     'CIFAR10': 'cifar-10-batches-py/batches.meta',
     'CIFAR100': 'cifar-100-python/meta',
     'Imagenette': 'labels.json'
-    
+
 }
 
 def get_classes(dataset, datadir):
     """
     return class names from dataset meta file / json file as a list of strings
+
+    Args:
+        dataset: (str) dataset name
+        datadir: (str) dataset directory
 
     Note:
     - in dataloader object, the labels are usually integer id's
@@ -189,15 +192,17 @@ def show_images(img):
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
-def show_labelled_images(dataset, img, labels, classes, nrows=8, ncols=8, savepath=None):
+def show_labelled_images(dataset, classes, img, labels, predicted=None, nrows=8, \
+    ncols=8, savepath=None):
     """
     print images in a grid with actual labels as image titles
 
     Args:
-        dataset: (str) dataset name
-        img: (tensor or np.ndarray) images; shape = BxCxHxW
-        labels: (tensor or np.ndarray) label indices; shape = Bx1
+        dataset: (str) dataset name; for saving images
         classes: (list of str) a list of strings for class names
+        img: (tensor or np.ndarray) images from dataset; shape = BxCxHxW
+        labels: (tensor or np.ndarray) label indices from dataset; shape = Bx1
+        predicted: (tensor or np.ndarray) predicted label indices from model output
         nrows: (int) # of rows in the grid; default=8
         ncols: (int) # of cols in the grid; default=8
         savepath: (str) path to save figures
@@ -220,22 +225,29 @@ def show_labelled_images(dataset, img, labels, classes, nrows=8, ncols=8, savepa
         os.makedirs(savepath)
 
     grid_sz = ncols * nrows
-    fig = plt.figure(figsize=(ncols*1.5, nrows*1.5))
+    fig = plt.figure(figsize=(ncols*2, nrows*2))
     for idx in range(0, npimg.shape[0]):
         ax = fig.add_subplot(nrows, ncols, idx % grid_sz + 1, xticks=[], yticks=[])
         # add image
         show_images(npimg[idx])
+
         # add label
         try:
-            ax.set_title(classes[int(labels[idx].item())])
+            # improve: better aesthetics
+            ax.text(0.5, 0.6, classes[int(labels[idx].item())], ha="center", va="bottom", \
+                size="medium", color="red", transform=ax.transAxes)
+            if predicted is not None:
+                assert len(labels) == len(predicted)
+                ax.text(0.5, 0.4, classes[int(predicted[idx].item())], ha="center", va="bottom", \
+                    size="medium", color="green", transform=ax.transAxes)
         except IndexError:
             raise "label index {} out of range for {} number of \
                 classes".format(labels[idx], len(classes))
         # save figure when current grid is full or when end of loop reached
         # create a new fig object once current grid is full
         if (idx + 1) % grid_sz == 0 or idx == npimg.shape[0]-1:
-            fig.subplots_adjust(hspace=0.5)
+            fig.subplots_adjust(hspace=0.8)
             plt.savefig(savepath + "/{}_{}.png".format(dataset, idx // grid_sz))
             plt.show()
             if (idx + 1) % grid_sz == 0:
-                fig = plt.figure(figsize=(ncols*1.5, nrows*1.5))
+                fig = plt.figure(figsize=(ncols*2, nrows*2))

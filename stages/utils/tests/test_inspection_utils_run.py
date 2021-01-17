@@ -7,50 +7,50 @@ import pytest
 
 import torch.nn as nn
 
-from stages.utils.inspection_utils import InspectionTrainer, batch_loader
+from stages.utils.inspection_utils import InspectionTrainer
 from stages.utils.dataset_utils import Dataset
 from common.utils import Params
 
 
+@pytest.fixture
+def run_dir():
+    return '../../tests/02_inspection/'
+
 @pytest.fixture()
-def params():
+def params(run_dir):
     """
     """
-    json_path = op.join('../../tests/directory/02_inspection/', \
-        'runset.json')
+    json_path = op.join(run_dir, 'runset.json')
     return Params(json_path)
 
 @pytest.fixture()
-def dataloader():
+def dataloader(run_dir, params):
     """
     """
-    return Dataset('../../tests/directory/02_inspection/').dataloader()
+    return Dataset(params=params, run_dir=run_dir).dataloader()
 
 
-def test_run_trainer_init(params, dataloader):
+def test_run_trainer_init(run_dir, params, dataloader):
     """
     Test Trainer class initialization
     """
-    trainer = InspectionTrainer(params, \
-        run_dir='../../tests/directory/02_inspection/')
+    trainer = InspectionTrainer(params, run_dir=run_dir)
     assert isinstance(trainer._model, nn.Module)
     trainloader, _ = dataloader
     images, _ = next(iter(trainloader))
     trainer.net_summary(images)
 
-def test_run_trainer_train(params, dataloader):
+def test_run_trainer_train(run_dir, params, dataloader):
     """
     """
-    trainer = InspectionTrainer(params, \
-        run_dir='../../tests/directory/02_inspection/')
+    trainer = InspectionTrainer(params, run_dir=run_dir)
     trainloader, _ = dataloader
     trainer.train(trainloader, iterations=5)
 
-def test_run_trainer_eval(params, dataloader):
+def test_run_trainer_eval(run_dir, params, dataloader):
     """
     """
-    trainer = InspectionTrainer(params, \
-        run_dir='../../tests/directory/02_inspection/')
+    trainer = InspectionTrainer(params, run_dir=run_dir)
     _, valloader = dataloader
     # test eval current model
     trainer.eval(valloader, iterations=1)

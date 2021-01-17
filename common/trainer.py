@@ -89,7 +89,6 @@ class Trainer(object):
         # write architecture to log file using torchsummary package
         print_net_summary(self.run_dir+'/{}_summary.log'.format(self._net_type), self._model, x)
 
-    
     @abstractmethod
     def train(self):
         """
