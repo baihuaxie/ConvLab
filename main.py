@@ -21,7 +21,6 @@ Note:
 import argparse
 import os
 import logging
-import numpy
 # torch
 import torch
 import torch.nn as nn
@@ -29,12 +28,12 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 
-from common.dataloader import fetch_dataloader, fetch_subset_dataloader
-from common.utils import Params, load_checkpoint, save_checkpoint, set_logger, print_net_summary
+from common.dataset.dataloader import fetch_dataloader, fetch_subset_dataloader
+from common.utils.misc_utils import Params, load_checkpoint, save_checkpoint, set_logger, print_net_summary
 from common.objectives import loss_fn, metrics
-from common.evaluate import evaluate
-from common.train import train
-from common.plots import save_batch_summary
+from common.flow.evaluate import evaluate
+from common.flow.train import train
+from common.logging.plots import save_batch_summary
 from model.build_models import get_network_builder
 
 

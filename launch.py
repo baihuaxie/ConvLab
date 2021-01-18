@@ -6,17 +6,18 @@ import os
 import typer
 
 
-from stages import dataset, inspection
+from stages import dataset, inspection, overfit
 
 app = typer.Typer()
 
 # add CLI sub-commands
 app.add_typer(dataset.app, name='dataset')
 app.add_typer(inspection.app, name='inspection')
+app.add_typer(overfit.app, name='overfit')
 
 
 @app.callback()
-def main(rundir: str = './stages/tests/directory/'):
+def main(rundir: str = './stages/tests/'):
     """
     Initializes launch directory, etc.
     """

@@ -38,7 +38,7 @@ import torchvision.datasets as ds
 from torch.utils.data import DataLoader
 from torch.utils.data import Subset
 
-from common.utility.dataloader_utils import make_weights_for_balanced_classes
+from common.utils.dataloader_utils import make_weights_for_balanced_classes
 
 normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406],

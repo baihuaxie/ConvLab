@@ -4,11 +4,12 @@
 
 import os
 from abc import abstractmethod
+import logging
 
 import torch
 import torch.optim as optim
 
-from common.utils import print_net_summary
+from common.utils.misc_utils import print_net_summary, load_checkpoint
 from common.objectives import loss_fn, metrics
 from model.build_models import get_network_builder
 
@@ -51,6 +52,9 @@ class Trainer(object):
         lr_type = params.scheduler['type']
         lr_kwargs = params.scheduler['kwargs']
 
+        # store runset parameters
+        self._params = params
+
         # get device
         self._cuda = torch.cuda.is_available()
         self._device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -77,6 +81,13 @@ class Trainer(object):
         # get metrics -> refactor metrics.py into registry
         self._metrics = metrics
 
+    @property
+    def get_model(self):
+        """
+        Return model instance
+        """
+        return self._model
+
 
     def net_summary(self, x):
         """
@@ -89,13 +100,11 @@ class Trainer(object):
         # write architecture to log file using torchsummary package
         print_net_summary(self.run_dir+'/{}_summary.log'.format(self._net_type), self._model, x)
 
-    
     @abstractmethod
     def train(self):
         """
         Abstract method to run training
         """
-        raise NotImplementedError
 
     @abstractmethod
     def eval(self):
@@ -109,8 +118,16 @@ class Trainer(object):
         Save a checkpoint of (model, optimizer, lr_scheduler)
         """
 
-    @abstractmethod
-    def load(self):
+    def load(self, restore_file=None):
         """
-        Load a checkpoint of (model, optimizer, lr_scheduler) from .pth file
+        Load (model, optimizer, lr_scheduler) states from .pth.zip file
+
+        Args:
+            restore_file: (str) file path to .pth.zip file = run_dir/restore_file.pth.zip
         """
+        # reload the weights from restore_file if specified
+        if restore_file is not None:
+            restore_path = os.path.join(self.run_dir, restore_file+'.pth.zip')
+            if os.path.exists(restore_path):
+                logging.info("Restoring weights from {}".format(restore_path))
+                load_checkpoint(restore_path, self._model, self._optimizer, self._scheduler)

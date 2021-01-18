@@ -6,7 +6,7 @@ import numpy as np
 
 import torch
 
-from common.utils import RunningAverage
+from common.utils.misc_utils import RunningAverage
 
 def evaluate(model, loss_fn, dataloader, metrics, params, device):
     """

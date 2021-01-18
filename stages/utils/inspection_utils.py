@@ -9,8 +9,8 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 
-from common.utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
-from common.trainer import Trainer
+from common.utils.misc_utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
+from common.flow.trainer import Trainer
 
 
 class InspectionTrainer(Trainer):
@@ -39,6 +39,13 @@ class InspectionTrainer(Trainer):
 
         # set the logger
         set_logger(os.path.join(self.run_dir, '02_inspection.log'))
+
+    
+    def get_model(self):
+        """
+        Return model instance
+        """
+        return self._model
 
 
     def train(self, dataloader=None, iterations=1, full_epoch=False, restore_file=None, ground_input=False):
@@ -177,8 +184,9 @@ class InspectionTrainer(Trainer):
                 print_summary_msg(summary_batch, idx+1, iterations, evaluate=evaluate)
             else:
                 # for larger training runs display a progress bar with running avg
-                prog.set_postfix(loss='{:05.3f}'.format(loss_avg()))
+                prog.set_postfix(avg_loss='{:05.3f}'.format(loss_avg()), last_loss='{:05.3f}'.format(loss_detached.item()))
                 prog.update()
+                # add: also display loss / accuracy at last iteration
 
         return summ, loss_avg()
 
@@ -199,6 +207,7 @@ class InspectionTrainer(Trainer):
             checkpoint=self.run_dir,
             checkpoint_name=checkpoint_name
         )
+        logging.info("Saved checkpoint: {}".format(os.path.join(self.run_dir, checkpoint_name)))
 
 
     def load(self, restore_file=None):
@@ -232,20 +241,37 @@ def print_summary_msg(summary_batch, prog, tot, evaluate=False):
     logging.info("- Iteration {}/{} {} metrics: {}".format(prog, tot, session, metrics_string))
 
 
-def batch_loader(dataloader, length=1, samples=3):
+def batch_loader(dataloader, length=1, samples=1):
     """
     Returns a DataLoader object that iterates over a single batch from 'dataloader' for 'len' times
 
     Args:
         dataloader: (DataLoader)
         len: (int) length of returned DataLoader object; default=1
-        samples: (int) number of samples in the returned batch; default=3
+        samples: (int) number of samples in the returned batch; default=1
 
     Note:
     - used for overfitting / evaluation anchored on a single batch of data
     """
     batch = next(iter(dataloader))
-    return DataLoader([batch for _ in range(length)])
+
+    sampled_batch = []
+
+    import numpy as np
+
+    # get a randomized mask
+    mask = np.zeros(batch[0].shape[0], dtype=bool)
+    mask[:samples] = 1
+    np.random.shuffle(mask)
+
+    for item in batch:
+        # tensor dimension would not be reduced even if samples=0
+        if item.dim() == 1:
+            sampled_batch.append(item[mask.tolist()])
+        else:
+            sampled_batch.append(item[mask.tolist(), :(item.dim() - 1)])
+
+    return DataLoader([sampled_batch for _ in range(length)], batch_size=None)
 
 
 

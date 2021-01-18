@@ -98,52 +98,17 @@ def kwargs(dataset):
 
 
 @pytest.fixture
-def dataloaders(dataset, datadir, transform, kwargs):
-    """
-    Fetch and load dataset into dataloader object
-
-    Note:
-    - did not use common fetch_dataloader() directly here to leave option to test transforms as well
-    """
-    print(dataset)
-
-    trainloader_kwargs, trainset_kwargs, valloader_kwargs, \
-        valset_kwargs = kwargs
-
-    # CIFAR
-    if dataset in ['CIFAR10', 'CIFAR100']:
-        traindir = datadir
-        valdir = datadir
-    # imagenet
-    if dataset in ['ImageNet', 'Imagenette', 'Imagewoof']:
-        dataset = 'ImageFolder'
-        traindir = op.join(datadir, 'train')
-        valdir = op.join(datadir, 'val')
-
-    # fetch dataset
-    trainset = getattr(ds, dataset)(traindir, transform=transform, \
-                    **trainset_kwargs)
-    valset = getattr(ds, dataset)(valdir, transform=transform, \
-                    **valset_kwargs)
-
-    # dataloaders
-    train_loader = DataLoader(trainset, **trainloader_kwargs)
-    val_loader = DataLoader(valset, **valloader_kwargs)
-
-    return train_loader, val_loader
-
-
-@pytest.fixture
 def classes(dataset, datadir):
     """
     """
     return get_classes(dataset, datadir)
 
-
 @pytest.fixture
 def samples(dataset, datadir, kwargs, transform):
     """
     Get 1 batch of random or label-balanced samples from training set
+
+    Used to test visualization functions
 
     Returns a tuple of (images, labels); both are tensors
     """
@@ -163,7 +128,6 @@ def samples(dataset, datadir, kwargs, transform):
         # return a single batch of data only
         return next(iter(trainloader))
 
-@pytest.mark.skip()
 def test_imshow(samples):
     """
     Print images
@@ -175,35 +139,13 @@ def test_imshow(samples):
     show_images(img_grid)
     plt.show()
 
-
 def test_show_labelled_images(samples, classes, dataset):
     """
-    Print images along with labels
+    Print images along with labels from dataset
     """
     images, labels = samples
-    show_labelled_images(dataset, images, labels, classes, nrows=4, ncols=4, \
+    show_labelled_images(dataset, classes, images, labels, nrows=4, ncols=8, \
         savepath='./samples/')
-
-
-@pytest.mark.skip()
-def test_get_labels_counts(dataloaders, dataset_num_classes):
-    """
-    """
-    train_loader, _ = dataloaders
-    print(get_labels_counts(train_loader, dataset_num_classes))
-
-
-def test_get_classes(dataset, datadir):
-    """
-    """
-    labels = get_classes(dataset, datadir)
-    print(labels)
-    if dataset is 'CIFAR10':
-        assert len(labels) == 10
-    if dataset is 'CIFAR100':
-        assert len(labels) == 100
-    if dataset in ['Imagenette', 'Imagewoof']:
-        assert len(labels) == 10
 
 
 

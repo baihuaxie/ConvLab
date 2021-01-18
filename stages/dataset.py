@@ -7,6 +7,7 @@ import typer
 
 import torchvision.transforms as transforms
 
+from common.utils.misc_utils import Params
 from stages.utils.dataset_utils import Dataset, get_labels_counts, get_classes, \
     show_labelled_images
 
@@ -18,7 +19,7 @@ def get_label_stats():
     """
     Print out statistics on the distribution of labels
     """
-    myData = Dataset(run_dir)
+    myData = Dataset(params=params, run_dir=run_dir)
     train_dl, _ = myData.dataloader()
     typer.echo(get_labels_counts(train_dl, myData.num_classes))
 
@@ -43,10 +44,10 @@ def get_samples(
     - the samples are taken at random or in label-balanced fashion
     - by default the samples are saved under './samples/' of current run directory
     """
-    myData = Dataset(run_dir)
+    myData = Dataset(params=params, run_dir=run_dir)
     images, labels = myData.sampler(transform=default_transform, balanced=True)
     classes = get_classes(myData.dataset, myData.datadir)
-    show_labelled_images(myData.dataset, images, labels, classes, nrows=nrows, ncols=ncols, \
+    show_labelled_images(myData.dataset, classes, images, labels, nrows=nrows, ncols=ncols, \
         savepath=os.path.join(run_dir, 'samples'))
 
 
@@ -61,6 +62,11 @@ def main():
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
     typer.echo("Running directory for dataset.py: {}".format(run_dir))
+
+    # get runset parameters
+    global params
+    json_path = os.path.join(run_dir, 'runset.json')
+    params = Params(json_path)
 
 
 if __name__ == '__main__':

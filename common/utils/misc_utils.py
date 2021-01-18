@@ -10,8 +10,6 @@ import json
 import logging
 import os
 import shutil
-import numpy as np
-import matplotlib.pyplot as plt
 import sys
 
 import torch
@@ -38,13 +36,13 @@ class Params():
         """ save parameters to json file """
         with open(json_path, 'w') as f:
             json.dump(self.__dict__, f, indent=4)
-        
+
     def update(self, json_path):
         """ update parameters from json file """
         with open(json_path) as f:
             params = json.load(f)
             self.__dict__.update(params)
-    
+
     @property
     def dict(self):
         """ return hyperparameters as a dictionary by Params.dict['hyperparameter name'] """
@@ -60,7 +58,7 @@ class RunningAverage():
     loss_avg = RunningAverage()
     loss_avg = loss_avg.update(5)
     loss_avg = loss_avg.upate(7)
-    print(loss_avg()) -> 6 
+    print(loss_avg()) -> 6
 
     """
 
@@ -89,7 +87,7 @@ def set_logger(log_path):
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    
+
     if not logger.handlers:
         # log into a file
         file_handler = logging.FileHandler(log_path)
@@ -157,8 +155,7 @@ def save_checkpoint(state, is_best=False, checkpoint=None, checkpoint_name=None)
         print("Checkpoint directory does not exist, making directory: {}".format(checkpoint))
         os.mkdir(checkpoint)
 
-    if not os.path.exists(filepath):
-        torch.save(state, filepath)
+    torch.save(state, filepath)
 
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.zip'))
