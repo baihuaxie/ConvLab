@@ -41,10 +41,13 @@ import typer
 
 import torch
 
-from common.utils import Params
+import wandb
+
+from common.utils.misc_utils import Params
 from stages.utils.inspection_utils import InspectionTrainer, batch_loader
 from stages.utils.dataset_utils import Dataset, show_labelled_images, get_classes
 
+wandb.init(project='myTestProject')
 
 app = typer.Typer()
 
@@ -111,7 +114,6 @@ def check_dependency():
     """
     Use backprop to check network's dependencies are correct
     """
-
 
 @app.command()
 def train_input_grounded(

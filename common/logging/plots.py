@@ -7,7 +7,7 @@ import os.path as op
 import pandas as pd
 import seaborn as sns
 
-from common.utils import Params
+from common.utils.misc_utils import Params
 
 
 def save_batch_summary(run_dir, data, run_flag=None):

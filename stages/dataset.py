@@ -7,7 +7,7 @@ import typer
 
 import torchvision.transforms as transforms
 
-from common.utils import Params
+from common.utils.misc_utils import Params
 from stages.utils.dataset_utils import Dataset, get_labels_counts, get_classes, \
     show_labelled_images
 

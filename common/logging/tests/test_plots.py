@@ -5,7 +5,7 @@ test plotting utilities
 import pytest
 import seaborn as sns
 
-from common.plots import save_batch_summary, read_csv, \
+from common.logging.plots import save_batch_summary, read_csv, \
     plot_batch_summary, read_rc_from_json
 
 @pytest.mark.skip()

@@ -1,12 +1,11 @@
 """
     test dataloader functions
 """
-
-import pytest
 import os.path as op
+import pytest
 
-from common.utils import Params, match_dict_by_value
-from common.dataloader import fetch_dataloader, \
+from common.utils.misc_utils import Params, match_dict_by_value
+from common.dataset.dataloader import fetch_dataloader, \
     select_n_random, fetch_subset_dataloader
 
 
@@ -122,4 +121,3 @@ def test_select_n_random(dataset, datadir, kwargs):
         assert labels.shape[0] == num
     else:
         pass
-

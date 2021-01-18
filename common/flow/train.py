@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 
 
-from common.utils import RunningAverage
+from common.utils.misc_utils import RunningAverage
 
 
 def train(model, optimizer, loss_fn, dataloader, metrics, params, epoch, device, writer=None):

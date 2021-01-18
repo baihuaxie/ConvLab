@@ -7,8 +7,8 @@ import pytest
 
 import torch.nn as nn
 
-from common.trainer import Trainer
-from common.utils import Params
+from common.flow.trainer import Trainer
+from common.utils.misc_utils import Params
 from stages.utils.dataset_utils import Dataset
 
 

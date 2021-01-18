@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from common.utils import set_logger
-from common.dataloader import fetch_dataloader, select_n_random
+from common.utils.misc_utils import set_logger
+from common.dataset.dataloader import fetch_dataloader, select_n_random
 
 
 class Dataset(object):

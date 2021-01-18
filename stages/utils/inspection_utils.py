@@ -9,8 +9,8 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 
-from common.utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
-from common.trainer import Trainer
+from common.utils.misc_utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
+from common.flow.trainer import Trainer
 
 
 class InspectionTrainer(Trainer):
