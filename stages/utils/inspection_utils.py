@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 from common.utils.misc_utils import set_logger, save_checkpoint, load_checkpoint, RunningAverage
 from common.flow.trainer import Trainer
 
-
 class InspectionTrainer(Trainer):
     """
     A trainer object to launch training / evaluation runs

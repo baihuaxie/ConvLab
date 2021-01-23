@@ -41,15 +41,18 @@ import typer
 
 import torch
 
-import wandb
-
 from common.utils.misc_utils import Params
 from stages.utils.inspection_utils import InspectionTrainer, batch_loader
 from stages.utils.dataset_utils import Dataset, show_labelled_images, get_classes
 
-wandb.init(project='myTestProject')
 
 app = typer.Typer()
+
+
+@app.command()
+def test_wandb():
+    trainer = InspectionTrainer(params, run_dir=run_dir)
+
 
 @app.command()
 def check_seed(
@@ -139,7 +142,6 @@ def overfit_batch(
     trainloader, _ = Dataset(params=params, run_dir=run_dir).dataloader()
     # get a dataloader to a single batch
     batch_dl = batch_loader(trainloader, length=iterations, samples=samples)
-
     trainer = InspectionTrainer(params, run_dir=run_dir)
     save_path = '{}_one_batch_overfit_last'.format(params.model['network'])
     # refactor: need to make sure that loss can be reduced to minimal in one run

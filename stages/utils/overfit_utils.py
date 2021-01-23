@@ -12,6 +12,8 @@ from common.utils.misc_utils import set_logger, RunningAverage, save_checkpoint
 from common.logging.plots import save_batch_summary
 from common.flow.trainer import Trainer
 
+#wandb.init(project='myTestProject')
+
 class OverfitTrainer(Trainer):
     """
     A trainer object to launch training / evaluation runs
@@ -46,8 +48,7 @@ class OverfitTrainer(Trainer):
 
         Args:
             dataloader: (DataLoader object) iterator to dataset
-            restore_file: (str) if specified, evaluated the pretrained model;
-                          by default evalaute the current model state
+            restore_file: (str) file path to .pth.zip file = run_dir/restore_file.pth.zip
             num_epochs: (int) number of epochs to train
             save_summayr: (bool) if True save batch summaries into a .csv file
         """
@@ -132,13 +133,14 @@ class OverfitTrainer(Trainer):
                     summary_batch.update({metric: metric_fn(output_batch.to('cpu'), \
                         labels_batch.to('cpu')) for metric, metric_fn in self._metrics.items()})
                     summary_batch.update({'loss': loss_detach})
+
+                    wandb.log(summary_batch)
+
                     summary_batch.update({'iteration': epoch*num_batches + i})
                     summary_batch.update({'epoch': epoch+ 1})
 
                     # append summary
                     summ.append(summary_batch)
-
-                    wandb.log(summary_batch)
 
                 # update the running average loss
                 loss_avg.update(loss_detach)
@@ -165,6 +167,8 @@ class OverfitTrainer(Trainer):
             epoch: (int) epoch index
             checkpoint_name: (str) file name for saved checkpoint; default='last'
         """
+        if checkpoint_name is None:
+            checkpoint_name = 'last'
         save_checkpoint(
             {
                 'epoch': epoch + 1,
