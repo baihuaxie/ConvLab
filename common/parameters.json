@@ -61,14 +61,13 @@
     ],
     "data": [
         {
-            "dataset": "CIFAR10",
+            "dataset": "MNIST",
             "num_classes": 10,
             "trainloader-kwargs":
             {
-                "batch_size": 32,
-                "num_workers": 4,
-                "pin_memory": false,
-                "shuffle": true
+                "batch_size": 256,
+                "num_workers": 6,
+                "pin_memory": false
             },
             "trainset-kwargs":
             {
@@ -77,10 +76,35 @@
             },
             "valloader-kwargs":
             {
-                "batch_size": 32,
-                "num_workers": 4,
-                "pin_memory": false,
-                "shuffle": false
+                "batch_size": 256,
+                "num_workers": 6,
+                "pin_memory": false
+            },
+            "valset-kwargs":
+            {
+                "download": false,
+                "train": false
+            }
+        },
+        {
+            "dataset": "CIFAR10",
+            "num_classes": 10,
+            "trainloader-kwargs":
+            {
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": false
+            },
+            "trainset-kwargs":
+            {
+                "download": false,
+                "train": true
+            },
+            "valloader-kwargs":
+            {
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": false
             },
             "valset-kwargs":
             {
@@ -93,10 +117,9 @@
             "num_classes": 100,
             "trainloader-kwargs":
             {
-                "batch_size": 32,
-                "num_workers": 4,
-                "pin_memory": false,
-                "shuffle": true
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": false
             },
             "trainset-kwargs":
             {
@@ -105,10 +128,9 @@
             },
             "valloader-kwargs":
             {
-                "batch_size": 32,
-                "num_workers": 4,
-                "pin_memory": false,
-                "shuffle": false
+                "batch_size": 128,
+                "num_workers": 6,
+                "pin_memory": false
             },
             "valset-kwargs":
             {
@@ -123,16 +145,50 @@
             {
                 "batch_size": 256,
                 "num_workers": 6,
-                "pin_memory": true,
-                "shuffle": true
+                "pin_memory": true
             },
             "trainset-kwargs":{},
             "valloader-kwargs":
             {
                 "batch_size": 256,
                 "num_workers": 6,
-                "pin_memory": true,
-                "shuffle": false
+                "pin_memory": true
+            },
+            "valset-kwargs":{}
+        },
+        {
+            "dataset": "Imagenette",
+            "num_classes": 10,
+            "trainloader-kwargs":
+            {
+                "batch_size": 64,
+                "num_workers": 6,
+                "pin_memory": true
+            },
+            "trainset-kwargs":{},
+            "valloader-kwargs":
+            {
+                "batch_size": 64,
+                "num_workers": 6,
+                "pin_memory": true
+            },
+            "valset-kwargs":{}
+        },
+        {
+            "dataset": "Imagewoof",
+            "num_classes": 10,
+            "trainloader-kwargs":
+            {
+                "batch_size": 64,
+                "num_workers": 6,
+                "pin_memory": true
+            },
+            "trainset-kwargs":{},
+            "valloader-kwargs":
+            {
+                "batch_size": 64,
+                "num_workers": 6,
+                "pin_memory": true
             },
             "valset-kwargs":{}
         }
