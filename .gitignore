@@ -1,4 +1,4 @@
-**/data/**
+*data*
 **/trained_models/**
 **/experiments/**
 *.gz
