@@ -21,10 +21,10 @@ def params():
     return Params(json_path)
 
 @pytest.fixture()
-def dataloader():
+def dataloader(params):
     """
     """
-    return Dataset('./').dataloader()
+    return Dataset(params, './').dataloader()
 
 
 def test_trainer_init(params, dataloader):
@@ -34,6 +34,7 @@ def test_trainer_init(params, dataloader):
     trainer = Trainer(params, \
         run_dir='./')
     assert isinstance(trainer._model, nn.Module)
+    print(trainer._optimizer)
     trainloader, _ = dataloader
     images, _ = next(iter(trainloader))
     trainer.net_summary(images)

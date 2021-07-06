@@ -29,6 +29,7 @@ class Dataset(object):
         # set run directory
         if run_dir is None:
             self.run_dir = os.getcwd()
+        print(run_dir)
         assert os.path.exists(run_dir), "Directory {} does not exist!".format(run_dir)
         self.run_dir = run_dir
 
