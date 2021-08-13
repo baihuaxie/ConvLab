@@ -142,6 +142,7 @@ class OverfitTrainer(Trainer):
                     # append summary
                     summ.append(summary_batch)
 
+
                 # update the running average loss
                 loss_avg.update(loss_detach)
 
